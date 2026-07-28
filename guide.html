@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parabellum Recensio — מדריך הפעלה</title>
+<style>
+  :root {
+    --bg:#111111; --card:#1e1e1e; --border:#2a2a2a;
+    --accent:#f59e0b; --text:#f5f0e8; --muted:#a8a29e;
+    --green:#4ade80; --red:#f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px;
+    padding-bottom: 40px;
+  }
+  .header {
+    background: #1a1a1a;
+    border-bottom: 2px solid var(--accent);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-title { font-size: 18px; font-weight: 800; color: var(--accent); }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .back-link {
+    color: var(--accent);
+    font-size: 20px;
+    text-decoration: none;
+    font-weight: 700;
+  }
+  .content { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
+  .section {
+    margin-bottom: 24px;
+  }
+  .section-title {
+    background: #1a1a1a;
+    border-right: 3px solid var(--accent);
+    padding: 10px 14px;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--accent);
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 12px;
+  }
+  .step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .step-num {
+    background: rgba(245,158,11,.15);
+    border: 1px solid rgba(245,158,11,.3);
+    color: var(--accent);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .step-body { flex: 1; }
+  .step-title { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+  .step-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .status-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .status-icon { font-size: 20px; margin-bottom: 4px; }
+  .status-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .status-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .s-found { border-color: #166534; }
+  .s-missing { border-color: #7f1d1d; }
+  .s-partial { border-color: #7c2d12; }
+  .s-transfer { border-color: #9a3412; }
+  .note {
+    background: rgba(245,158,11,.08);
+    border: 1px solid rgba(245,158,11,.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  .note strong { color: var(--accent); }
+  .version-badge {
+    text-align: center;
+    font-size: 11px;
+    color: #57534e;
+    font-family: monospace;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="javascript:history.back()" class="back-link">‹</a>
+  <div>
+    <div class="header-title">מדריך הפעלה</div>
+    <div class="header-sub">Parabellum Recensio</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- כניסה -->
+  <div class="section">
+    <div class="section-title">1. כניסה לאפליקציה</div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">פתח את הקישור בדפדפן</div>
+        <div class="step-desc">פתח את Chrome או Safari בטלפון והכנס את הקישור של האפליקציה.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">בחר את שמך</div>
+        <div class="step-desc">לחץ על שמך מהרשימה, או הקלד שם ידנית בשדה למטה.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">לחץ כניסה</div>
+        <div class="step-desc">הכפתור יופעל אחרי בחירת שם. תועבר למסך הראשי.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ניווט -->
+  <div class="section">
+    <div class="section-title">2. ניווט במחסן</div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-body">
+        <div class="step-title">תפריט ראשי</div>
+        <div class="step-desc">בחר אחסון זמני, תא או ארון מגירות.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-body">
+        <div class="step-title">קומה / מגירה</div>
+        <div class="step-desc">בחר את הקומה או המגירה שאתה אחראי עליה.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">→</div>
+      <div class="step-body">
+        <div class="step-title">קופסא</div>
+        <div class="step-desc">אם יש קופסאות בפנים, לחץ להיכנס. הפריטים הישירים מופיעים מעל.</div>
+      </div>
+    </div>
+    <div class="note"><strong>חזרה:</strong> לחץ על "מחסן חלפים" בראש המסך לחזרה לתפריט הראשי בכל שלב.</div>
+  </div>
+
+  <!-- סימון -->
+  <div class="section">
+    <div class="section-title">3. סימון פריטים</div>
+    <div class="status-grid">
+      <div class="status-card s-found">
+        <div class="status-icon">✓</div>
+        <div class="status-name" style="color:#4ade80">נמצא</div>
+        <div class="status-desc">הפריט קיים בכמות הרשומה. לחיצה אחת.</div>
+      </div>
+      <div class="status-card s-missing">
+        <div class="status-icon">✗</div>
+        <div class="status-name" style="color:#f87171">חסר</div>
+        <div class="status-desc">הפריט לא נמצא כלל. לחיצה אחת.</div>
+      </div>
+      <div class="status-card s-partial">
+        <div class="status-icon">~</div>
+        <div class="status-name" style="color:#fb923c">כמות שונה</div>
+        <div class="status-desc">נמצא אך בכמות אחרת. הזן כמות ← אישור.</div>
+      </div>
+      <div class="status-card s-transfer">
+        <div class="status-icon">→</div>
+        <div class="status-name" style="color:#fb923c">הועבר</div>
+        <div class="status-desc">הפריט במיקום אחר. בחר יעד מהרשימה.</div>
+      </div>
+    </div>
+    <div class="note"><strong>ביטול סימון:</strong> לחץ שוב על אותה אפשרות — הסימון יימחק.</div>
+  </div>
+
+  <!-- חיפוש -->
+  <div class="section">
+    <div class="section-title">4. חיפוש פריט</div>
+    <div class="step">
+      <div class="step-num">🔍</div>
+      <div class="step-body">
+        <div class="step-title">חיפוש מקומי</div>
+        <div class="step-desc">בתוך כל מגירה, קומה או קופסא יש שדה חיפוש בראש הרשימה. הקלד מקט או חלק מהתיאור — הרשימה מסתננת אוטומטית.</div>
+      </div>
+    </div>
+    <div class="note"><strong>שים לב:</strong> החיפוש הוא מקומי בלבד — רק בתוך המיקום שנמצאים בו, לא בכל המחסן.</div>
+  </div>
+
+  <!-- פריט לא רשום -->
+  <div class="section">
+    <div class="section-title">5. פריט שלא ברשימה</div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">לחץ "הוסף פריט לא רשום"</div>
+        <div class="step-desc">כפתור בתחתית כל מסך.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">מלא פרטים</div>
+        <div class="step-desc">מקט, תיאור, חח עבור, כמות. תיאור הוא שדה חובה.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">שמור</div>
+        <div class="step-desc">הפריט יתווסף לרשימה ויסונכרן לכלל המשתמשים.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ניהול קופסאות -->
+  <div class="section">
+    <div class="section-title">6. ניהול קופסאות</div>
+    <div class="step">
+      <div class="step-num">＋</div>
+      <div class="step-body">
+        <div class="step-title">קופסא חדשה</div>
+        <div class="step-desc">לחץ "קופסא חדשה" בתחתית קומה/מגירה. הזן שם ← צור.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">↔</div>
+      <div class="step-body">
+        <div class="step-title">העבר קופסא</div>
+        <div class="step-desc">מתוך תצוגת הקופסא — בחר יעד. כל הפריטים עוברים איתה.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">✕</div>
+      <div class="step-body">
+        <div class="step-title">מחק קופסא</div>
+        <div class="step-desc">הפריטים עוברים ל"חלפים לסידור". יש לשייך כל פריט למיקום חדש.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- עבודה משותפת -->
+  <div class="section">
+    <div class="section-title">7. עבודה משותפת</div>
+    <div class="step">
+      <div class="step-num">👥</div>
+      <div class="step-body">
+        <div class="step-title">כל אחד על מיקום נפרד</div>
+        <div class="step-desc">חלקו ביניכם את המגירות והתאים לפני תחילת הספירה.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🔄</div>
+      <div class="step-body">
+        <div class="step-title">סנכרון אוטומטי</div>
+        <div class="step-desc">העדכונים מסונכרנים כל 5 שניות לכלל המשתמשים.</div>
+      </div>
+    </div>
+    <div class="note"><strong>חשוב:</strong> אין לעבוד על אותה מגירה בו-זמנית עם אדם נוסף.</div>
+  </div>
+
+  <!-- דוח -->
+  <div class="section">
+    <div class="section-title">8. דוח סופי</div>
+    <div class="step">
+      <div class="step-num">📊</div>
+      <div class="step-body">
+        <div class="step-title">ייצוא CSV</div>
+        <div class="step-desc">בתפריט הראשי — לחץ "ייצא דוח CSV". הדוח כולל את כל הפריטים עם הסטטוס הנוכחי, שם המעדכן ותאריך ההוצאה. הכפתור פעיל רק לאחר שסומן לפחות פריט אחד.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="version-badge">
+    Parabellum Recensio | amorealms | v27.07.26.08
+  </div>
+
+</div>
+</body>
+</html>
