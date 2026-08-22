@@ -302,7 +302,7 @@ body.theme-steel .login-card{background:#fff}
       <button onclick="enterSimulation()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">SIM</button>
       <button onclick="openTheme()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🎨</button>
     </div>
-    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v22.08.26.05</div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v22.08.26.06</div>
   </div>
 </div>
 
@@ -323,7 +323,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v22.08.26.05</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v22.08.26.06</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -436,23 +436,23 @@ body.theme-steel .login-card{background:#fff}
     <div class="sheet-sub" id="sheetMeta">—</div>
     <div class="action-list">
       <div style="padding:0 2px 6px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">סטטוס ספירה</div>
-      <button class="action-btn ab-found"   id="abFound"   onclick="doAction('found')"><span class="ic">✓</span>נמצא</button>
-      <button class="action-btn ab-missing" id="abMissing" onclick="doAction('missing')"><span class="ic">✗</span>חסר</button>
+      <button class="action-btn ab-found"   id="abFound"   data-action="found"><span class="ic">✓</span>נמצא</button>
+      <button class="action-btn ab-missing" id="abMissing" data-action="missing"><span class="ic">✗</span>חסר</button>
       <div style="height:1px;background:var(--border);margin:6px 0"></div>
       <div style="padding:0 2px 6px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">פעולות</div>
-      <button class="action-btn" style="color:var(--yellow);border-color:var(--yellow-border)" onclick="toggleField('partialField')"><span class="ic">~</span>עדכן כמות</button>
+      <button class="action-btn" style="color:var(--yellow);border-color:var(--yellow-border)" data-toggle="partialField"><span class="ic">~</span>עדכן כמות</button>
       <div class="inline-field" id="partialField">
         <input type="number" class="inline-input" id="partialQty" placeholder="כמות חדשה" min="0">
-        <button class="inline-confirm" onclick="doAction('updateqty')">אישור</button>
+        <button class="inline-confirm" data-action="updateqty">אישור</button>
       </div>
-      <button class="action-btn" style="color:var(--orange);border-color:var(--orange-border)" onclick="toggleField('transferField')"><span class="ic">→</span>העבר מיקום</button>
+      <button class="action-btn" style="color:var(--orange);border-color:var(--orange-border)" data-toggle="transferField"><span class="ic">→</span>העבר מיקום</button>
       <div class="inline-field" id="transferField">
         <select class="loc-select" id="transferDest"></select>
-        <button class="inline-confirm" style="background:var(--orange)" onclick="doAction('transfer')">אישור</button>
+        <button class="inline-confirm" style="background:var(--orange)" data-action="transfer">אישור</button>
       </div>
       <div style="height:1px;background:var(--border);margin:6px 0"></div>
-      <button class="action-btn" style="color:var(--muted);border-color:var(--border)" onclick="doAction('reset')"><span class="ic">↺</span>אפס בחירה</button>
-      <button class="action-btn" style="color:var(--red);border-color:var(--red-border)" onclick="doAction('delete_item')"><span class="ic">🗑</span>העבר לסל</button>
+      <button class="action-btn" style="color:var(--muted);border-color:var(--border)" data-action="reset"><span class="ic">↺</span>אפס בחירה</button>
+      <button class="action-btn" style="color:var(--red);border-color:var(--red-border)" data-action="delete_item"><span class="ic">🗑</span>העבר לסל</button>
     </div>
   </div>
 </div>
@@ -1665,6 +1665,19 @@ function manualRefresh() {
   loadState();
 }
 
+// Wire action sheet via event delegation
+document.addEventListener("DOMContentLoaded", function() {
+  const actionOverlay = document.getElementById("actionOverlay");
+  if(actionOverlay) {
+    actionOverlay.addEventListener("click", function(e) {
+      const btn = e.target.closest("[data-action]");
+      if(btn) { doAction(btn.dataset.action); return; }
+      const tog = e.target.closest("[data-toggle]");
+      if(tog) { toggleField(tog.dataset.toggle); return; }
+    });
+  }
+});
+
 function initSync() {
   loadState();
   setInterval(pollState, 5000);
@@ -2076,10 +2089,12 @@ function openAction(id) {
   document.getElementById("sheetMeta").textContent =
     item.makat + " · " + (item.hch||"—") + " · רשום: " + item.kama +
     (s.user ? " · עודכן ע\"י " + s.user : "");
-  ["abFound","abMissing","abPartial","abTransfer"].forEach(b =>
-    document.getElementById(b).classList.remove("sel"));
-  const m = {found:"abFound",missing:"abMissing",partial:"abPartial",transfer:"abTransfer"};
-  if(s.status && m[s.status]) document.getElementById(m[s.status]).classList.add("sel");
+  ["abFound","abMissing"].forEach(b => {
+    const el = document.getElementById(b);
+    if(el) el.classList.remove("sel");
+  });
+  if(s.status==="found") { const el=document.getElementById("abFound"); if(el) el.classList.add("sel"); }
+  if(s.status==="missing") { const el=document.getElementById("abMissing"); if(el) el.classList.add("sel"); }
   document.getElementById("partialField").classList.remove("show");
   document.getElementById("transferField").classList.remove("show");
   document.getElementById("partialQty").value = s.foundQty || "";
@@ -2473,7 +2488,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v22.08.26.05 | SIM";
+    document.getElementById("versionBadge").textContent = "v22.08.26.06 | SIM";
   goHome();
 }
 
@@ -2490,7 +2505,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v22.08.26.05";
+  if(vb) vb.textContent = "v22.08.26.06";
 }
 
 async function resetSim() {
@@ -2757,7 +2772,7 @@ async function logError(context, err) {
   try {
     const params = new URLSearchParams({
       action:"adderror", context, error:entry.error,
-      user:currentUser||"", version:"v22.08.26.05"
+      user:currentUser||"", version:"v22.08.26.06"
     });
     await fetch(GS_URL + "?" + params.toString());
   } catch(e2) {}
@@ -3009,14 +3024,14 @@ function exportCSV() {
       <img id="aboutLogo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
       <div style="font-size:20px;font-weight:800;color:var(--accent)">Parabellum Recensio</div>
       <div style="font-size:13px;color:var(--muted)">מערכת ספירת מלאי שטח</div>
-      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v22.08.26.05</div>
+      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v22.08.26.06</div>
       <div style="font-size:12px;color:#57534e">פותח ע"י amorealms</div>
       <div style="width:100%;height:1px;background:#2a2a2a;margin:4px 0"></div>
       <a href="https://amorealms.github.io/pb0/guide.html" target="_blank"
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v22.08.26.05</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v22.08.26.06</div>
     </div>
   </div>
 </div>
