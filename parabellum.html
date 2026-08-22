@@ -261,6 +261,22 @@ body.theme-steel .item-row{background:#fff}
 body.theme-steel .sheet{background:#fff}
 body.theme-steel .sync-bar,body.theme-steel .breadcrumb,body.theme-steel .progress-wrap,body.theme-steel .pills{background:#fff}
 body.theme-steel .login-card{background:#fff}
+
+/* ── TOAST NOTIFICATIONS ── */
+.toast-wrap{position:fixed;bottom:24px;right:50%;transform:translateX(50%);z-index:500;width:calc(100% - 28px);max-width:420px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#1e1e1e;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:toastIn .25s ease;pointer-events:all}
+.toast.success{border-right:4px solid var(--green)}
+.toast.error{border-right:4px solid var(--red)}
+.toast-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.toast-title{font-size:13px;font-weight:800;color:var(--text)}
+.toast-icon{font-size:16px;margin-left:6px}
+.toast-body{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.toast-actions{display:flex;gap:8px}
+.toast-btn{flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--white);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;text-align:center}
+.toast-btn.primary{background:var(--accent);color:#111;border-color:var(--accent)}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(10px)}}
+.toast.hiding{animation:toastOut .2s ease forwards}
 </style>
 </head>
 <body>
@@ -295,6 +311,7 @@ body.theme-steel .login-card{background:#fff}
     <button class="back-btn" id="backBtn" onclick="goBack()" style="display:none">‹</button>
     <div class="topbar-title" id="topTitle" onclick="goHome()" style="cursor:pointer">מחסן חלפים</div>
     <div class="user-badge" id="userBadge" onclick="openUserSelect()" style="cursor:pointer">—</div>
+    <button onclick="manualRefresh()" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:var(--accent);width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="רענן">↻</button>
   </div>
   <div class="sim-banner" id="simBanner">
     <span>⚠️ מצב סימולציה</span>
@@ -304,7 +321,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v08.08.26.25</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v08.08.26.26</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -1462,6 +1479,7 @@ async function loadState() {
       restoreDynBoxes();
     }
   } catch(e) {
+    logError("טעינה", e);
     document.getElementById("syncDot").className = "sync-dot error";
     document.getElementById("syncText").textContent = "שגיאת חיבור";
   }
@@ -1496,6 +1514,7 @@ async function saveState(key, statusObj, itemId) {
     await fetch(GS_URL + "?" + params.toString() + simParam);
     document.getElementById("syncText").textContent = "מסונכרן · " + new Date().toLocaleTimeString("he-IL");
   } catch(e) {
+    logError("שמירה", e);
     document.getElementById("syncDot").className = "sync-dot error";
     document.getElementById("syncText").textContent = "שגיאת סנכרון";
   }
@@ -1579,6 +1598,12 @@ window.addEventListener("popstate", function(e) {
   else if(s.screen==="box")   { goBox(s.type, s.unit, s.sub, s.box, true); }
 });
 
+function manualRefresh() {
+  const btn = document.querySelector('[onclick="manualRefresh()"]');
+  if(btn) { btn.style.transform = "rotate(360deg)"; btn.style.transition = "transform .5s"; setTimeout(()=>{btn.style.transform="";btn.style.transition=""},600); }
+  loadState();
+}
+
 function initSync() {
   loadState();
   setInterval(pollState, 5000);
@@ -1654,7 +1679,7 @@ function updateGlobal() {
   document.getElementById("cMissing").textContent = m;
   document.getElementById("cPartial").textContent = p;
   document.getElementById("cTransfer").textContent = t;
-  document.getElementById("cNew").textContent = addedItems.filter(i => sharedState[i.id]?.status !== "deleted").length;
+  document.getElementById("cNew").textContent = addedItems.filter(i => !["deleted","permanent_delete"].includes(sharedState[i.id]?.status)).length;
   document.getElementById("exportBtn").disabled = done===0 && addedItems.length===0;
 }
 
@@ -1796,14 +1821,9 @@ function renderHome() {
   document.getElementById("taaList").innerHTML  = taaFiltered.map(renderUnitCard).join("");
   document.getElementById("aronList").innerHTML = aronKeys.map(renderUnitCard).join("");
   // Show trash if has deleted items
-  const deletedItems = [...ITEMS,...addedItems].filter(i => sharedState[i.id]?.status==="deleted");
   const trashSection = document.getElementById("trashSection");
-  if(deletedItems.length) {
-    trashSection.style.display = "block";
-    document.getElementById("trashList").innerHTML = renderUnitCard("תא_99");
-  } else {
-    trashSection.style.display = "none";
-  }
+  trashSection.style.display = "block";
+  document.getElementById("trashList").innerHTML = renderUnitCard("תא_99");
 }
 
 function renderUnit(type, unit) {
@@ -2040,11 +2060,23 @@ async function doAction(type) {
     const val = parseInt(document.getElementById("partialQty").value);
     if(isNaN(val)||val<0) { document.getElementById("partialQty").focus(); return; }
     if(current==="partial") { delete sharedState[activeItemId]; await deleteState(activeItemId); }
-    else { sharedState[activeItemId] = {...base, status:"partial", foundQty:val}; await saveState(activeItemId, sharedState[activeItemId], activeItemId); recordAction(activeItemId,"partial"); }
+    else {
+      const oldQty = item.kama;
+      sharedState[activeItemId] = {...base, status:"partial", foundQty:val};
+      await saveState(activeItemId, sharedState[activeItemId], activeItemId);
+      recordAction(activeItemId,"partial");
+      showToast("success","הכמות עודכנה בהצלחה",[...itemDetails(item),`<strong>כמות ישנה:</strong> ${oldQty}`,`<strong>כמות חדשה:</strong> ${val}`],[]);
+    }
   } else if(type==="transfer") {
     const dest = document.getElementById("transferDest").value;
     if(current==="transfer") { delete sharedState[activeItemId]; await deleteState(activeItemId); }
-    else { sharedState[activeItemId] = {...base, status:"transfer", dest}; await saveState(activeItemId, sharedState[activeItemId], activeItemId); recordAction(activeItemId,"transfer",dest); }
+    else {
+      const oldLoc = itemLocStr(item);
+      sharedState[activeItemId] = {...base, status:"transfer", dest};
+      await saveState(activeItemId, sharedState[activeItemId], activeItemId);
+      recordAction(activeItemId,"transfer",dest);
+      showToast("success","הפריט הועבר בהצלחה",[...itemDetails(item),`<strong>מ:</strong> ${oldLoc}`,`<strong>אל:</strong> ${dest}`],[]);
+    }
   }
   if(type === "reset") {
     if(!sharedState[activeItemId]) { closeOverlay("actionOverlay"); return; }
@@ -2060,9 +2092,11 @@ async function doAction(type) {
     if(!confirm("מחק את הפריט:\n" + itemLabel + "\n\nהפריט יוסר מהרשימה לצמיתות.")) return;
     // Remove from addedItems if new
     // Mark as deleted (goes to trash, not permanent)
+    const deletedItem = [...ITEMS,...addedItems].find(i=>i.id===activeItemId);
     sharedState[activeItemId] = {status:"deleted", user:currentUser, ts:Date.now()};
     await saveState(activeItemId, sharedState[activeItemId], activeItemId);
     recordAction(activeItemId,"deleted");
+    if(deletedItem) showToast("success","הפריט הועבר לסל",[...itemDetails(deletedItem)],[]);
     closeOverlay("actionOverlay");
     reRender();
     updateGlobal();
@@ -2119,6 +2153,9 @@ async function saveNewItem() {
   ["fMakat","fTeur","fHch","fKli","fQty"].forEach(i => document.getElementById(i).value="");
   reRender();
   updateGlobal();
+  showToast("success", "פריט נוסף בהצלחה", itemDetails(item), [
+    {label:"הוסף פריט נוסף", primary:true, onclick:"openAddForm()"}
+  ]);
 }
 
 // ── OVERLAY UTILS ──
@@ -2351,7 +2388,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v08.08.26.25 | SIM";
+    document.getElementById("versionBadge").textContent = "v08.08.26.26 | SIM";
   goHome();
 }
 
@@ -2368,7 +2405,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v08.08.26.25";
+  if(vb) vb.textContent = "v08.08.26.26";
 }
 
 async function resetSim() {
@@ -2475,11 +2512,13 @@ function renderLog(f) {
 
 // ── TRASH FUNCTIONS ──
 async function restoreItem(id) {
+  const restoredItem = [...ITEMS,...addedItems].find(i=>i.id===id);
   delete sharedState[id];
   await deleteState(id);
   reRender();
   updateGlobal();
   renderUnit("תא","99");
+  if(restoredItem) showToast("success","הפריט שוחזר",[...itemDetails(restoredItem)],[]);
 }
 
 async function permanentDelete(id) {
@@ -2487,11 +2526,66 @@ async function permanentDelete(id) {
   // Remove from addedItems if new
   const idx = addedItems.findIndex(i => i.id===id);
   if(idx !== -1) addedItems.splice(idx, 1);
+  const permItem = [...ITEMS,...addedItems].find(i=>i.id===id);
   sharedState[id] = {status:"permanent_delete", user:currentUser, ts:Date.now()};
   await saveState(id, sharedState[id], id);
   reRender();
   updateGlobal();
   renderUnit("תא","99");
+  if(permItem) showToast("success","הפריט נמחק לצמיתות",[`<strong>מקט:</strong> ${permItem.makat}`,`<strong>תיאור:</strong> ${permItem.teur}`],[]);
+}
+
+
+// ── TOAST NOTIFICATIONS ──
+function showToast(type, title, bodyLines, actions) {
+  const wrap = document.getElementById("toastWrap");
+  const toast = document.createElement("div");
+  toast.className = "toast " + type;
+  const icon = type === "success" ? "✅" : "❌";
+  const actionsHtml = (actions||[]).map(a =>
+    `<button class="toast-btn ${a.primary?'primary':''}" onclick="${a.onclick}">${a.label}</button>`
+  ).join("") + `<button class="toast-btn" onclick="dismissToast(this.closest('.toast'))">סגור</button>`;
+  toast.innerHTML = `
+    <div class="toast-header">
+      <span class="toast-title"><span class="toast-icon">${icon}</span> ${title}</span>
+    </div>
+    <div class="toast-body">${bodyLines.join("<br>")}</div>
+    <div class="toast-actions">${actionsHtml}</div>`;
+  wrap.appendChild(toast);
+  // Auto dismiss after 8s
+  setTimeout(() => dismissToast(toast), 8000);
+}
+
+function dismissToast(toast) {
+  if(!toast || !toast.parentNode) return;
+  toast.classList.add("hiding");
+  setTimeout(() => toast.parentNode && toast.parentNode.removeChild(toast), 220);
+}
+
+function itemDetails(item) {
+  const lines = [];
+  lines.push(`<strong>מקט:</strong> ${item.makat}`);
+  lines.push(`<strong>תיאור:</strong> ${item.teur}`);
+  if(item.hch) lines.push(`<strong>חח עבור:</strong> ${item.hch}`);
+  lines.push(`<strong>מיקום:</strong> ${itemLocStr(item)}`);
+  return lines;
+}
+
+function itemLocStr(item) {
+  const loc = itemEffectiveLocation(item);
+  const isV00 = loc.type==="תא" && loc.unit==="00";
+  const subName = isV00 ? (SUB_LABELS_00[loc.sub]||loc.sub) : (loc.type==="תא"?"קומה ":"מגירה ")+loc.sub;
+  return loc.type+" "+loc.unit+" — "+subName+(loc.box?" קופסא "+loc.box:"");
+}
+
+// ── ERROR LOG ──
+let errorLog = [];
+function logError(context, err) {
+  const entry = {time: new Date().toLocaleTimeString("he-IL"), context, error: err?.toString()||String(err)};
+  errorLog.unshift(entry);
+  if(errorLog.length > 50) errorLog.pop();
+  showToast("error", "שגיאה — " + context, [entry.error, entry.time], []);
+  console.error("[PB Error]", context, err);
 }
 
 // ── EXPORT ──
@@ -2626,7 +2720,7 @@ function exportCSV() {
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v08.08.26.25</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v08.08.26.26</div>
     </div>
   </div>
 </div>
@@ -2668,5 +2762,9 @@ function exportCSV() {
     </div>
   </div>
 </div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-wrap" id="toastWrap"></div>
+
 </body>
 </html>
