@@ -1,5 +1,5 @@
 <!--
-  Parabellum Recensio v22.08.26.10
+  Parabellum Recensio v23.08.26.02
   תאריך: 22.08.26
 
   תיקונים:
@@ -291,6 +291,25 @@ body.theme-steel .login-card{background:#fff}
 @keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(10px)}}
 .toast.hiding{animation:toastOut .2s ease forwards}
+
+/* ── SUMMARY SCREEN ── */
+.sum-card{flex:1;background:var(--white);border:1.5px solid var(--border);border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:border-color .15s}
+.sum-card.active{border-width:2.5px}
+.sum-found.active{border-color:var(--green)}
+.sum-missing.active{border-color:var(--red)}
+.sum-pending.active{border-color:var(--muted)}
+.sum-num{font-size:28px;font-weight:800;margin-bottom:2px}
+.sum-found .sum-num{color:var(--green)}
+.sum-missing .sum-num{color:var(--red)}
+.sum-pending .sum-num{color:var(--muted)}
+.sum-label{font-size:12px;color:var(--muted);font-weight:700}
+.sum-table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px;white-space:nowrap}
+.sum-table th{background:var(--white);border-bottom:2px solid var(--border);padding:8px 10px;text-align:right;font-weight:700;color:var(--muted);position:sticky;top:0}
+.sum-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.sum-table tr:hover td{background:var(--accent-light)}
+.sum-table tr.s-found td{background:rgba(74,222,128,.05)}
+.sum-table tr.s-missing td{background:rgba(248,113,113,.05)}
+
 </style>
 </head>
 <body>
@@ -316,7 +335,7 @@ body.theme-steel .login-card{background:#fff}
       <button onclick="enterSimulation()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">SIM</button>
       <button onclick="openTheme()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🎨</button>
     </div>
-    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v22.08.26.10</div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.02</div>
   </div>
 </div>
 
@@ -337,7 +356,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v22.08.26.10</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.02</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -350,6 +369,41 @@ body.theme-steel .login-card{background:#fff}
     <div class="pill p-orange" onclick="openLogScreen('transfer')" style="cursor:pointer">הועבר <span id="cTransfer">0</span></div>
     <div class="pill p-yellow" onclick="openLogScreen('qty')" style="cursor:pointer">כמות <span id="cPartial">0</span></div>
     <div class="pill p-purple" onclick="openLogScreen('items')" style="cursor:pointer">פריטים <span id="cNew">0</span></div>
+  </div>
+
+  <!-- SUMMARY SCREEN -->
+  <div class="screen" id="screenSummary">
+    <div style="padding:12px 14px;display:flex;gap:10px">
+      <div class="sum-card sum-found" onclick="filterSummary('found')">
+        <div class="sum-num" id="sumFound">0</div>
+        <div class="sum-label">נמצאו ✓</div>
+      </div>
+      <div class="sum-card sum-missing" onclick="filterSummary('missing')">
+        <div class="sum-num" id="sumMissing">0</div>
+        <div class="sum-label">חסרים ✗</div>
+      </div>
+      <div class="sum-card sum-pending" onclick="filterSummary('pending')">
+        <div class="sum-num" id="sumPending">0</div>
+        <div class="sum-label">לא נספרו</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;padding:0 14px">
+      <table class="sum-table" id="sumTable">
+        <thead>
+          <tr>
+            <th>חומר</th><th>תיאור</th><th>חח עבור</th><th>סוג כלי</th>
+            <th>כמות</th><th>מיקום</th><th>סוג אחסון</th><th>מספר/צ'</th>
+            <th>-</th><th>מס' מדף</th><th>בקופסא?</th><th>מס' קופסא</th>
+            <th>סטטוס</th><th>נבדק ע"י</th><th>תאריך</th><th>הוספה</th>
+          </tr>
+        </thead>
+        <tbody id="sumTableBody"></tbody>
+      </table>
+    </div>
+    <div style="padding:14px;display:flex;gap:10px">
+      <button onclick="doExportCSV('all')" style="flex:1;padding:12px;background:var(--accent);color:#111;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">ייצא CSV מלא</button>
+      <button onclick="doExportCSV('filtered')" id="exportFilteredBtn" style="flex:1;padding:12px;background:var(--white);color:var(--accent);border:1.5px solid var(--accent);border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">ייצא סינון נוכחי</button>
+    </div>
   </div>
 
   <!-- LOG SCREEN -->
@@ -467,6 +521,8 @@ body.theme-steel .login-card{background:#fff}
       <div style="height:1px;background:var(--border);margin:6px 0"></div>
       <button class="action-btn" style="color:var(--muted);border-color:var(--border)" data-action="reset"><span class="ic">↺</span>אפס בחירה</button>
       <button class="action-btn" style="color:var(--red);border-color:var(--red-border)" data-action="delete_item"><span class="ic">🗑</span>העבר לסל</button>
+      <div style="height:1px;background:var(--border);margin:4px 0"></div>
+      <button class="action-btn" style="color:var(--muted);border-color:var(--border)" data-action="history"><span class="ic">📋</span>היסטוריית פריט</button>
     </div>
   </div>
 </div>
@@ -1641,7 +1697,13 @@ async function pollState() {
       const newTs = Date.now();
       if(newTs > syncTs + 4000) {
         const raw = d.state || {};
-        Object.keys(raw).forEach(k => { if(raw[k].status==="cancelled") delete raw[k]; });
+        Object.keys(raw).forEach(k => {
+          if(raw[k].status==="cancelled") delete raw[k];
+        });
+        // Merge: keep local changes not yet in Sheet
+        Object.keys(sharedState).forEach(k => {
+          if(!raw[k] && sharedState[k]?.status !== "cancelled") raw[k] = sharedState[k];
+        });
         sharedState = raw;
         restoreDynBoxes();
         syncTs = newTs;
@@ -1725,13 +1787,24 @@ function subItems(type, unit, sub) {
 function boxItems(type, unit, sub, box) {
   return allItems().filter(i => {
     const loc = itemEffectiveLocation(i);
-    return loc.type===type && loc.unit===unit && loc.sub===sub && loc.box===box && loc.box!=="__unsorted__";
+    const s = sharedState[i.id];
+    if(s && s.status==="transfer" && s.dest) {
+      return loc.type===type && loc.unit===unit && loc.sub===sub && loc.box===box && loc.box!=="__unsorted__";
+    }
+    return i.type===type && i.unit===unit && i.sub===sub && i.box===box && i.box!=="__unsorted__" &&
+           !(s && s.status==="transfer");
   });
 }
 function directItems(type, unit, sub) {
   return allItems().filter(i => {
     const loc = itemEffectiveLocation(i);
-    return loc.type===type && loc.unit===unit && loc.sub===sub && !loc.box;
+    const s = sharedState[i.id];
+    // If item has transfer status, only show at destination
+    if(s && s.status==="transfer" && s.dest) {
+      return loc.type===type && loc.unit===unit && loc.sub===sub && !loc.box;
+    }
+    return i.type===type && i.unit===unit && i.sub===sub && !i.box &&
+           !(s && s.status==="transfer");
   });
 }
 
@@ -1851,7 +1924,7 @@ function goBox(type, unit, sub, box, skipHistory) {
 }
 
 function goBack() {
-  if(nav.screen==="log") goHome();
+  if(nav.screen==="log" || nav.screen==="summary") goHome();
   else if(nav.box)       goSub(nav.unit.type, nav.unit.unit, nav.sub);
   else if(nav.sub)       goUnit(nav.unit.type, nav.unit.unit);
   else if(nav.unit)      goHome();
@@ -2056,7 +2129,7 @@ function renderItemRow(item) {
   if(status==="partial")  stag = `<span class="tag t-partial">~ ${s.foundQty}</span>`;
   if(status==="transfer") stag = `<span class="tag t-transfer">→ ${s.dest||""}</span>`;
   const utag = s.user ? `<span class="tag t-user">${s.user}</span>` : "";
-  return `<div class="item-row s-${status}" data-item-id="${item.id}" onclick="handleItemClick(this)">
+  return `<div class="item-row s-${status}" data-item-id="${item.id}" data-makat="${item.makat}" data-teur="${item.teur}" onclick="handleItemClick(this)">
     <div class="item-top">
       <div class="item-makat" style="font-size:14px;font-weight:800;color:var(--text);font-family:monospace">${item.makat}</div>
     </div>
@@ -2183,6 +2256,11 @@ async function doAction(type) {
       await recordAction(activeItemId,"transfer",dest,{locOld:oldLoc, locNew:dest});
       showToast("success","הפריט הועבר בהצלחה",[...itemDetails(item),`<strong>מ:</strong> ${oldLoc}`,`<strong>אל:</strong> ${dest}`],[]);
     }
+  }
+  if(type === "history") {
+    openItemHistory(activeItemId);
+    closeOverlay("actionOverlay");
+    return;
   }
   if(type === "reset") {
     if(!sharedState[activeItemId]) { closeOverlay("actionOverlay"); return; }
@@ -2474,10 +2552,10 @@ function filterSubItems() {
   if(!input) return;
   const q = input.value.trim().toLowerCase();
   document.querySelectorAll("#subDirectList .item-row").forEach(row => {
-    const makat = (row.querySelector(".item-makat")?.textContent || "").toLowerCase();
-    const name  = (row.querySelector(".item-name")?.textContent || "").toLowerCase();
+    const makat = (row.dataset.makat || row.querySelector(".item-makat")?.textContent || "").toLowerCase();
+    const teur  = (row.dataset.teur  || row.querySelector(".item-name")?.textContent  || "").toLowerCase();
     const tags  = (row.querySelector(".item-tags")?.textContent || "").toLowerCase();
-    row.style.display = (!q || makat.includes(q) || name.includes(q) || tags.includes(q)) ? "" : "none";
+    row.style.display = (!q || makat.includes(q) || teur.includes(q) || tags.includes(q)) ? "" : "none";
   });
 }
 
@@ -2486,10 +2564,10 @@ function filterBoxItems() {
   if(!input) return;
   const q = input.value.trim().toLowerCase();
   document.querySelectorAll("#boxList .item-row").forEach(row => {
-    const makat = (row.querySelector(".item-makat")?.textContent || "").toLowerCase();
-    const name  = (row.querySelector(".item-name")?.textContent || "").toLowerCase();
+    const makat = (row.dataset.makat || row.querySelector(".item-makat")?.textContent || "").toLowerCase();
+    const teur  = (row.dataset.teur  || row.querySelector(".item-name")?.textContent  || "").toLowerCase();
     const tags  = (row.querySelector(".item-tags")?.textContent || "").toLowerCase();
-    row.style.display = (!q || makat.includes(q) || name.includes(q) || tags.includes(q)) ? "" : "none";
+    row.style.display = (!q || makat.includes(q) || teur.includes(q) || tags.includes(q)) ? "" : "none";
   });
 }
 
@@ -2513,7 +2591,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v22.08.26.10 | SIM";
+    document.getElementById("versionBadge").textContent = "v23.08.26.02 | SIM";
   goHome();
 }
 
@@ -2530,7 +2608,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v22.08.26.10";
+  if(vb) vb.textContent = "v23.08.26.02";
 }
 
 async function resetSim() {
@@ -2702,6 +2780,72 @@ function clearErrorLog() {
   closeOverlay("errorLogOverlay");
 }
 
+// ── ITEM HISTORY ──
+async function openItemHistory(itemId) {
+  const item = [...ITEMS,...addedItems].find(i=>i.id===itemId);
+  if(!item) return;
+
+  document.getElementById("historyItemInfo").textContent =
+    item.makat + " — " + item.teur;
+  document.getElementById("historyList").innerHTML =
+    '<div style="text-align:center;padding:20px;color:var(--muted)">טוען...</div>';
+  document.getElementById("historyOverlay").classList.add("open");
+
+  // Filter local actionLog first
+  const localEntries = actionLog.filter(e =>
+    e.makat && item.makat && e.makat.replace(/'/g,"") === item.makat.replace(/'/g,"")
+  );
+  renderItemHistory(localEntries);
+
+  // Load from Sheet for full history
+  try {
+    const r = await fetch(GS_URL + "?action=getlog");
+    const d = await r.json();
+    if(d.ok && d.log) {
+      const makat = item.makat.replace(/'/g,"");
+      const entries = d.log.filter(e => (e.makat||"").replace(/'/g,"") === makat);
+      const statusLabels = {
+        "נמצא ✓":"נמצא ✓","חסר ✗":"חסר ✗","הועבר →":"הועבר →",
+        "כמות ~":"כמות ~","נוסף +":"נוסף +","הועבר לסל 🗑":"הועבר לסל",
+        "נמחק לצמיתות ❌":"נמחק","בוטל ↺":"בוטל","אופס ↺":"אופס",
+        "שוחזר ♻️":"שוחזר"
+      };
+      const mapped = entries.map(e => ({
+        time: e.time, label: statusLabels[e.peula]||e.peula||"",
+        status: e.sug, loc: e.locOld||"", dest: e.locNew||"",
+        qtyOld: e.qtyOld||"", qtyNew: e.qtyNew||"", user: e.user||""
+      }));
+      renderItemHistory(mapped);
+    }
+  } catch(e) { logError("היסטוריית פריט", e); }
+}
+
+function renderItemHistory(entries) {
+  const list = document.getElementById("historyList");
+  if(!entries.length) {
+    list.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted)">אין היסטוריה לפריט זה</div>';
+    return;
+  }
+  const colors = {
+    "נמצא ✓":"var(--green)","חסר ✗":"var(--red)","הועבר →":"var(--orange)",
+    "כמות ~":"var(--yellow)","נוסף +":"var(--purple)","הועבר לסל":"var(--red)",
+    "בוטל":"var(--muted)","אופס":"var(--muted)","שוחזר":"var(--green)"
+  };
+  list.innerHTML = entries.map(e => `
+    <div class="log-entry">
+      <div class="log-entry-top">
+        <span class="log-entry-action" style="color:${colors[e.label]||'var(--muted)'}">${e.label}</span>
+        <span class="log-entry-time">${e.time}</span>
+      </div>
+      <div class="log-entry-meta">
+        ${e.loc ? "מ: "+e.loc : ""}
+        ${e.dest ? " · אל: "+e.dest : ""}
+        ${e.qtyNew ? " · עודכן ל: "+e.qtyNew : ""}
+        ${e.user ? " · "+e.user : ""}
+      </div>
+    </div>`).join("");
+}
+
 // ── TRASH FUNCTIONS ──
 async function restoreItem(id) {
   const restoredItem = [...ITEMS,...addedItems].find(i=>i.id===id);
@@ -2761,7 +2905,7 @@ function showToast(type, title, bodyLines, actions) {
     <div class="toast-actions">${actionsHtml}</div>`;
   wrap.appendChild(toast);
   // Auto dismiss after 8s
-  setTimeout(() => dismissToast(toast), 8000);
+  setTimeout(() => dismissToast(toast), 30000);
 }
 
 function dismissToast(toast) {
@@ -2800,7 +2944,7 @@ async function logError(context, err) {
   try {
     const params = new URLSearchParams({
       action:"adderror", context, error:entry.error,
-      user:currentUser||"", version:"v22.08.26.10"
+      user:currentUser||"", version:"v23.08.26.02"
     });
     await fetch(GS_URL + "?" + params.toString());
   } catch(e2) {}
@@ -2914,8 +3058,109 @@ async function loadLogFromSheet() {
   } catch(e) { logError("טעינת לוג", e); }
 }
 
+// ── SUMMARY SCREEN ──
+let summaryFilter = "all";
+
+function openSummary() {
+  nav = {unit:null, sub:null, box:null, screen:"summary"};
+  document.getElementById("backBtn").style.display = "flex";
+  document.getElementById("topTitle").textContent = "סיכום ספירה";
+  setBreadcrumb([
+    '<span class="bc-link" onclick="goLogin()">ראשי</span>',
+    '<span style="margin:0 4px;color:var(--muted)"> › </span>',
+    '<span class="bc-link" onclick="goHome()">מחסן חלפים</span>',
+    '<span style="margin:0 4px;color:var(--muted)"> › </span>',
+    '<span>סיכום ספירה</span>'
+  ]);
+  showScreen("screenSummary");
+  renderSummary("all");
+}
+
+function filterSummary(f) {
+  summaryFilter = f;
+  document.querySelectorAll(".sum-card").forEach(c => c.classList.remove("active"));
+  const map = {found:"sum-found", missing:"sum-missing", pending:"sum-pending"};
+  if(map[f]) document.querySelector("."+map[f])?.classList.add("active");
+  renderSummary(f);
+}
+
+function getSummaryRows(f) {
+  const sMap = {found:"נמצא", missing:"חסר", cancelled:"לא נספר", pending:"לא נספר", transfer:"הועבר"};
+  return allItems()
+    .filter(i => {
+      const st = sharedState[i.id]?.status || "pending";
+      if(f==="found") return st==="found" || st==="transfer";
+      if(f==="missing") return st==="missing";
+      if(f==="pending") return !st || st==="pending" || st==="cancelled";
+      return true;
+    })
+    .map(item => {
+      const s = sharedState[item.id] || {};
+      const st = s.status || "pending";
+      const loc = itemEffectiveLocation(item);
+      const isV00 = loc.type==="תא" && loc.unit==="00";
+      const subLabel = isV00 ? (SUB_LABELS_00[loc.sub]||loc.sub) : (loc.type==="מגירה"?"מגירה ":"תא ")+loc.unit+" - "+loc.sub;
+      const locStr = subLabel + (loc.box ? " קופ' " + loc.box : "");
+      const checkedDate = s.ts ? new Date(s.ts).toLocaleDateString("he-IL") : "";
+      return {
+        makat: item.makat, teur: item.teur, hch: item.hch||"", kli: item.kli||"",
+        kama: item.kama||"", locStr, storageType: loc.type,
+        unitNum: parseInt(loc.unit)||"", dash:"-", shelfNum: loc.sub,
+        hasBox: loc.box?"קופ'":"", boxNum: loc.box||"",
+        status: sMap[st]||"לא נספר", user: s.user||"",
+        checkedDate, date: item.date||"", st
+      };
+    });
+}
+
+function renderSummary(f) {
+  const allRows = getSummaryRows("all");
+  const found   = allRows.filter(r => r.st==="found"||r.st==="transfer").length;
+  const missing = allRows.filter(r => r.st==="missing").length;
+  const pending = allRows.filter(r => !r.st||r.st==="pending"||r.st==="cancelled").length;
+  document.getElementById("sumFound").textContent = found;
+  document.getElementById("sumMissing").textContent = missing;
+  document.getElementById("sumPending").textContent = pending;
+
+  const rows = getSummaryRows(f);
+  const tbody = document.getElementById("sumTableBody");
+  tbody.innerHTML = rows.map(r => `
+    <tr class="s-${r.st}">
+      <td style="font-family:monospace">${r.makat}</td>
+      <td>${r.teur}</td><td>${r.hch}</td><td>${r.kli}</td>
+      <td style="text-align:center">${r.kama}</td>
+      <td>${r.locStr}</td><td>${r.storageType}</td>
+      <td style="text-align:center">${r.unitNum}</td>
+      <td style="text-align:center">-</td>
+      <td style="text-align:center">${r.shelfNum}</td>
+      <td style="text-align:center">${r.hasBox}</td>
+      <td style="text-align:center">${r.boxNum}</td>
+      <td><span style="font-weight:700;color:${r.st==="found"?"var(--green)":r.st==="missing"?"var(--red)":"var(--muted)"}">${r.status}</span></td>
+      <td>${r.user}</td><td>${r.checkedDate}</td><td>${r.date}</td>
+    </tr>`).join("");
+}
+
+function doExportCSV(mode) {
+  const rows = mode==="filtered" ? getSummaryRows(summaryFilter) : getSummaryRows("all");
+  const headers = ["חומר","תיאור","חח עבור","סוג כלי","כמות","מיקום לפי מערכת","סוג אחסון","מספר/צ'","-","מס' מדף","האם בקופסא?","מס' קופסא","סטטוס ספירה","נבדק ע\"י","תאריך ספירה","תאריך הוספה מקורי"];
+  const csvRows = [headers, ...rows.map(r => [
+    "'"+r.makat, r.teur, r.hch, r.kli, r.kama, r.locStr,
+    r.storageType, r.unitNum, "-", r.shelfNum, r.hasBox, r.boxNum,
+    r.status, r.user, r.checkedDate, r.date
+  ])];
+  const csv = csvRows.map(r => r.map(v => `"${String(v).replace(/"/g,'\"')}`+'"').join(",")).join("\n");
+  const bom = "\uFEFF";
+  const blob = new Blob([bom+csv], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  const d = new Date();
+  a.download = `recensio_ספירה_${d.getDate()}_${d.getMonth()+1}_${d.getFullYear()}.csv`;
+  a.click();
+}
+
 // ── EXPORT ──
-function exportCSV() {
+function exportCSV() { doExportCSV("all"); }
+function exportCSV_old() {
   const sMap = {found:"נמצא", missing:"חסר", cancelled:"לא נספר", pending:"לא נספר"};
   const exportDate = new Date().toLocaleString("he-IL");
   // Headers identical to old PB-0 format
@@ -3057,14 +3302,14 @@ function exportCSV() {
       <img id="aboutLogo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
       <div style="font-size:20px;font-weight:800;color:var(--accent)">Parabellum Recensio</div>
       <div style="font-size:13px;color:var(--muted)">מערכת ספירת מלאי שטח</div>
-      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v22.08.26.10</div>
+      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.02</div>
       <div style="font-size:12px;color:#57534e">פותח ע"י amorealms</div>
       <div style="width:100%;height:1px;background:#2a2a2a;margin:4px 0"></div>
       <a href="https://amorealms.github.io/pb0/guide.html" target="_blank"
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v22.08.26.10</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.02</div>
     </div>
   </div>
 </div>
@@ -3096,6 +3341,20 @@ function exportCSV() {
       <button onclick="clearErrorLog()" style="font-size:12px;color:var(--red);background:none;border:none;cursor:pointer">נקה</button>
     </div>
     <div style="overflow-y:auto;max-height:65vh;padding:0 14px 14px" id="errorLogList"></div>
+  </div>
+</div>
+
+<!-- HISTORY SHEET -->
+<div class="overlay" id="historyOverlay" onclick="overlayClick(event,'historyOverlay')">
+  <div class="sheet" style="max-height:85vh">
+    <div class="sheet-handle"></div>
+    <div style="padding:0 18px 10px">
+      <div class="sheet-title" style="padding:0">📋 היסטוריית פריט</div>
+      <div id="historyItemInfo" style="font-size:13px;color:var(--muted);margin-top:2px"></div>
+    </div>
+    <div style="overflow-y:auto;max-height:60vh;padding:0 14px 14px" id="historyList">
+      <div style="text-align:center;padding:32px;color:var(--muted)">טוען...</div>
+    </div>
   </div>
 </div>
 
