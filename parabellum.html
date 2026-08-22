@@ -1437,19 +1437,7 @@ let syncTs = 0;
 const STORAGE_KEY = "pb_inventory_v1";
 
 // All location options for transfer dropdown
-const ALL_LOCS = [];
-for(const [key, u] of Object.entries(STRUCTURE)) {
-  for(const [sub, boxes] of Object.entries(u.subs)) {
-    const isV00 = u.type==="תא" && u.unit==="00";
-    const isV99 = u.type==="תא" && u.unit==="99";
-    let locName;
-    if(isV00) locName = "אחסון זמני — " + (SUB_LABELS_00[sub]||sub);
-    else if(isV99) locName = "X — פריטים שהוסרו";
-    else locName = u.type + " " + u.unit + " - " + sub;
-    ALL_LOCS.push(locName);
-    for(const box of boxes) ALL_LOCS.push(locName + " קופסא " + box);
-  }
-}
+// ALL_LOCS initialized below after SUB_LABELS_00
 
 // ── LOGIN ──
 let selName = null;
@@ -1878,6 +1866,20 @@ const UNIT_LABELS = {
 const SUB_LABELS_00 = {"א":"A — חלפים שהגיעו", "ב":"Z — חלפים להסדרה"};
 const SUB_ICONS_00 = {"א":"📦", "ב":"🔄"};
 const SUB_LABELS_99 = {"א":"פריטים שנמחקו"};
+
+const ALL_LOCS = [];
+for(const [key, u] of Object.entries(STRUCTURE)) {
+  for(const [sub, boxes] of Object.entries(u.subs)) {
+    const isV00 = u.type==="תא" && u.unit==="00";
+    const isV99 = u.type==="תא" && u.unit==="99";
+    let locName;
+    if(isV00) locName = "אחסון זמני — " + (SUB_LABELS_00[sub]||sub);
+    else if(isV99) locName = "X — פריטים שהוסרו";
+    else locName = u.type + " " + u.unit + " - " + sub;
+    ALL_LOCS.push(locName);
+    for(const box of boxes) ALL_LOCS.push(locName + " קופסא " + box);
+  }
+}
 
 function renderHome() {
   // Ensure תא 99 exists in STRUCTURE
