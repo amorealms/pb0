@@ -321,7 +321,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v08.08.26.26</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v22.08.26.02</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -418,25 +418,24 @@ body.theme-steel .login-card{background:#fff}
     <div class="sheet-title" id="sheetName">—</div>
     <div class="sheet-sub" id="sheetMeta">—</div>
     <div class="action-list">
-      <button class="action-btn ab-found"    id="abFound"    onclick="doAction('found')">   <span class="ic">✓</span>נמצא במלואו</button>
-      <button class="action-btn ab-missing"  id="abMissing"  onclick="doAction('missing')"> <span class="ic">✗</span>לא נמצא</button>
-      <button class="action-btn ab-partial"  id="abPartial"  onclick="toggleField('partialField')"><span class="ic">~</span>כמות שונה</button>
+      <div style="padding:0 2px 6px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">סטטוס ספירה</div>
+      <button class="action-btn ab-found"   id="abFound"   onclick="doAction('found')"><span class="ic">✓</span>נמצא</button>
+      <button class="action-btn ab-missing" id="abMissing" onclick="doAction('missing')"><span class="ic">✗</span>חסר</button>
+      <div style="height:1px;background:var(--border);margin:6px 0"></div>
+      <div style="padding:0 2px 6px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">פעולות</div>
+      <button class="action-btn" style="color:var(--yellow);border-color:var(--yellow-border)" onclick="toggleField('partialField')"><span class="ic">~</span>עדכן כמות</button>
       <div class="inline-field" id="partialField">
-        <input type="number" class="inline-input" id="partialQty" placeholder="כמות שנמצאה" min="0">
-        <button class="inline-confirm" onclick="doAction('partial')">אישור</button>
+        <input type="number" class="inline-input" id="partialQty" placeholder="כמות חדשה" min="0">
+        <button class="inline-confirm" onclick="doAction('updateqty')">אישור</button>
       </div>
-      <button class="action-btn ab-transfer" id="abTransfer" onclick="toggleField('transferField')"><span class="ic">→</span>הועבר למיקום אחר</button>
+      <button class="action-btn" style="color:var(--orange);border-color:var(--orange-border)" onclick="toggleField('transferField')"><span class="ic">→</span>העבר מיקום</button>
       <div class="inline-field" id="transferField">
         <select class="loc-select" id="transferDest"></select>
         <button class="inline-confirm" style="background:var(--orange)" onclick="doAction('transfer')">אישור</button>
       </div>
-      <div style="height:1px;background:var(--border);margin:4px 0"></div>
-      <button class="action-btn" style="color:var(--muted);border-color:var(--border)" onclick="doAction('reset')">
-        <span class="ic">↺</span>אפס בחירה
-      </button>
-      <button class="action-btn" style="color:var(--red);border-color:var(--red-border)" onclick="doAction('delete_item')">
-        <span class="ic">🗑</span>העבר לסל
-      </button>
+      <div style="height:1px;background:var(--border);margin:6px 0"></div>
+      <button class="action-btn" style="color:var(--muted);border-color:var(--border)" onclick="doAction('reset')"><span class="ic">↺</span>אפס בחירה</button>
+      <button class="action-btn" style="color:var(--red);border-color:var(--red-border)" onclick="doAction('delete_item')"><span class="ic">🗑</span>העבר לסל</button>
     </div>
   </div>
 </div>
@@ -1443,6 +1442,51 @@ function doLogin() {
 // ── SYNC via Google Sheets ──
 const GS_URL = "https://script.google.com/macros/s/AKfycbxRo__WUHaTr4kXcDj_CVZj_U0PQbu2FSHpmza8Tf8nRcN238WpsaLnAK-kOjPl74Cl/exec";
 
+// ── OFFLINE QUEUE ──
+let offlineQueue = JSON.parse(localStorage.getItem("pb_offline_queue")||"[]");
+
+function saveOfflineQueue() {
+  try { localStorage.setItem("pb_offline_queue", JSON.stringify(offlineQueue)); } catch(e) {}
+}
+
+async function fetchWithQueue(url) {
+  if(!navigator.onLine) {
+    offlineQueue.push({url, ts:Date.now()});
+    saveOfflineQueue();
+    document.getElementById("syncDot").className = "sync-dot error";
+    document.getElementById("syncText").textContent = "אופליין — " + offlineQueue.length + " ממתינים";
+    return {ok:false, offline:true};
+  }
+  const r = await fetch(url);
+  return r;
+}
+
+async function flushOfflineQueue() {
+  if(!navigator.onLine || offlineQueue.length === 0) return;
+  const queue = [...offlineQueue];
+  offlineQueue = [];
+  saveOfflineQueue();
+  let sent = 0;
+  for(const item of queue) {
+    try { await fetch(item.url); sent++; } catch(e) { offlineQueue.push(item); }
+  }
+  saveOfflineQueue();
+  if(sent > 0) {
+    document.getElementById("syncText").textContent = "סונכרן " + sent + " עדכונים שמורים";
+  }
+}
+
+window.addEventListener("online", () => {
+  document.getElementById("syncDot").className = "sync-dot";
+  flushOfflineQueue();
+});
+window.addEventListener("offline", () => {
+  document.getElementById("syncDot").className = "sync-dot error";
+  document.getElementById("syncText").textContent = "אופליין";
+});
+
+
+
 async function loadState() {
   const simParam = isSimMode ? "&mode=sim" : "";
   if(isSimMode) setSyncing(false);
@@ -1511,7 +1555,7 @@ async function saveState(key, statusObj, itemId) {
       dest: s.dest || '',
       user: s.user || currentUser || ''
     });
-    await fetch(GS_URL + "?" + params.toString() + simParam);
+    await fetchWithQueue(GS_URL + "?" + params.toString() + simParam);
     document.getElementById("syncText").textContent = "מסונכרן · " + new Date().toLocaleTimeString("he-IL");
   } catch(e) {
     logError("שמירה", e);
@@ -2054,8 +2098,8 @@ async function doAction(type) {
   const current = sharedState[activeItemId]?.status;
   if(type==="found" && current==="found")           { /* use reset button */ }
   else if(type==="missing" && current==="missing")  { /* use reset button */ }
-  else if(type==="found")   { sharedState[activeItemId] = {...base, status:"found",   foundQty:parseInt(item.kama)||0}; await saveState(activeItemId, sharedState[activeItemId], activeItemId); recordAction(activeItemId,"found"); }
-  else if(type==="missing") { sharedState[activeItemId] = {...base, status:"missing", foundQty:0}; await saveState(activeItemId, sharedState[activeItemId], activeItemId); recordAction(activeItemId,"missing"); }
+  else if(type==="found")   { sharedState[activeItemId] = {...base, status:"found",   foundQty:parseInt(item.kama)||0}; await saveState(activeItemId, sharedState[activeItemId], activeItemId); await recordAction(activeItemId,"found"); }
+  else if(type==="missing") { sharedState[activeItemId] = {...base, status:"missing", foundQty:0}; await saveState(activeItemId, sharedState[activeItemId], activeItemId); await recordAction(activeItemId,"missing"); }
   else if(type==="partial") {
     const val = parseInt(document.getElementById("partialQty").value);
     if(isNaN(val)||val<0) { document.getElementById("partialQty").focus(); return; }
@@ -2074,7 +2118,7 @@ async function doAction(type) {
       const oldLoc = itemLocStr(item);
       sharedState[activeItemId] = {...base, status:"transfer", dest};
       await saveState(activeItemId, sharedState[activeItemId], activeItemId);
-      recordAction(activeItemId,"transfer",dest);
+      await recordAction(activeItemId,"transfer",dest,{locOld:oldLoc, locNew:dest});
       showToast("success","הפריט הועבר בהצלחה",[...itemDetails(item),`<strong>מ:</strong> ${oldLoc}`,`<strong>אל:</strong> ${dest}`],[]);
     }
   }
@@ -2082,7 +2126,22 @@ async function doAction(type) {
     if(!sharedState[activeItemId]) { closeOverlay("actionOverlay"); return; }
     delete sharedState[activeItemId];
     await deleteState(activeItemId);
-    recordAction(activeItemId,"cancelled");
+    await recordAction(activeItemId,"reset");
+    closeOverlay("actionOverlay");
+    reRender(); updateGlobal();
+    return;
+  }
+  if(type === "updateqty") {
+    const val = parseInt(document.getElementById("partialQty").value);
+    if(isNaN(val)||val<0) { document.getElementById("partialQty").focus(); return; }
+    const oldQty = item.kama;
+    // Update item quantity in memory
+    item.kama = val;
+    // Mark as found with new quantity
+    sharedState[activeItemId] = {...base, status:"found", foundQty:val};
+    await saveState(activeItemId, sharedState[activeItemId], activeItemId);
+    await recordAction(activeItemId,"partial",null,{qtyOld:oldQty, qtyNew:val});
+    showToast("success","הכמות עודכנה בהצלחה",[...itemDetails(item),`<strong>כמות ישנה:</strong> ${oldQty}`,`<strong>כמות חדשה:</strong> ${val}`],[]);
     closeOverlay("actionOverlay");
     reRender(); updateGlobal();
     return;
@@ -2093,7 +2152,8 @@ async function doAction(type) {
     // Remove from addedItems if new
     // Mark as deleted (goes to trash, not permanent)
     const deletedItem = [...ITEMS,...addedItems].find(i=>i.id===activeItemId);
-    sharedState[activeItemId] = {status:"deleted", user:currentUser, ts:Date.now()};
+    const lastLoc = deletedItem ? itemLocStr(deletedItem) : "";
+    sharedState[activeItemId] = {status:"deleted", user:currentUser, ts:Date.now(), lastLoc};
     await saveState(activeItemId, sharedState[activeItemId], activeItemId);
     recordAction(activeItemId,"deleted");
     if(deletedItem) showToast("success","הפריט הועבר לסל",[...itemDetails(deletedItem)],[]);
@@ -2351,9 +2411,10 @@ function filterSubItems() {
   if(!input) return;
   const q = input.value.trim().toLowerCase();
   document.querySelectorAll("#subDirectList .item-row").forEach(row => {
-    const makat = row.querySelector(".item-makat")?.textContent.toLowerCase() || "";
-    const name  = row.querySelector(".item-name")?.textContent.toLowerCase() || "";
-    row.style.display = (!q || makat.includes(q) || name.includes(q)) ? "" : "none";
+    const makat = (row.querySelector(".item-makat")?.textContent || "").toLowerCase();
+    const name  = (row.querySelector(".item-name")?.textContent || "").toLowerCase();
+    const tags  = (row.querySelector(".item-tags")?.textContent || "").toLowerCase();
+    row.style.display = (!q || makat.includes(q) || name.includes(q) || tags.includes(q)) ? "" : "none";
   });
 }
 
@@ -2362,9 +2423,10 @@ function filterBoxItems() {
   if(!input) return;
   const q = input.value.trim().toLowerCase();
   document.querySelectorAll("#boxList .item-row").forEach(row => {
-    const makat = row.querySelector(".item-makat")?.textContent.toLowerCase() || "";
-    const name  = row.querySelector(".item-name")?.textContent.toLowerCase() || "";
-    row.style.display = (!q || makat.includes(q) || name.includes(q)) ? "" : "none";
+    const makat = (row.querySelector(".item-makat")?.textContent || "").toLowerCase();
+    const name  = (row.querySelector(".item-name")?.textContent || "").toLowerCase();
+    const tags  = (row.querySelector(".item-tags")?.textContent || "").toLowerCase();
+    row.style.display = (!q || makat.includes(q) || name.includes(q) || tags.includes(q)) ? "" : "none";
   });
 }
 
@@ -2388,7 +2450,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v08.08.26.26 | SIM";
+    document.getElementById("versionBadge").textContent = "v22.08.26.02 | SIM";
   goHome();
 }
 
@@ -2405,7 +2467,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v08.08.26.26";
+  if(vb) vb.textContent = "v22.08.26.02";
 }
 
 async function resetSim() {
@@ -2467,20 +2529,38 @@ function openAbout() {
 // ── ACTION LOG ──
 let actionLog = []; // {time, status, makat, teur, loc, user}
 
-function recordAction(itemId, status, dest) {
+async function recordAction(itemId, status, dest, extraData) {
   const item = [...ITEMS,...addedItems].find(i=>i.id===itemId) || {makat:itemId,teur:"—",type:"",unit:"",sub:""};
   const effLoc = itemEffectiveLocation(item);
   const isV00 = effLoc.type==="תא" && effLoc.unit==="00";
   const subName = isV00 ? (SUB_LABELS_00[effLoc.sub]||effLoc.sub) : (effLoc.type==="תא"?"קומה ":"מגירה ")+effLoc.sub;
   const loc = effLoc.type+" "+effLoc.unit+" — "+subName+(effLoc.box?" קופסא "+effLoc.box:"");
-  const statusLabels = {found:"נמצא ✓",missing:"חסר ✗",partial:"כמות שונה ~",transfer:"הועבר →",deleted:"נמחק 🗑",cancelled:"בוטל"};
-  actionLog.unshift({
+  const statusLabels = {found:"נמצא ✓",missing:"חסר ✗",partial:"כמות שונה ~",transfer:"הועבר →",deleted:"נמחק 🗑",cancelled:"בוטל",reset:"אופס ↺",added:"נוסף +"};
+  const entry = {
     time: new Date().toLocaleTimeString("he-IL"),
     status, label: statusLabels[status]||status,
     makat: item.makat, teur: item.teur,
-    loc, dest: dest||"", user: currentUser
-  });
+    loc, dest: dest||"", user: currentUser,
+    locOld: extraData?.locOld||"", locNew: extraData?.locNew||"",
+    qtyOld: extraData?.qtyOld||"", qtyNew: extraData?.qtyNew||""
+  };
+  actionLog.unshift(entry);
   if(actionLog.length > 200) actionLog.pop();
+  // Persist to Sheet (not in SIM)
+  if(!isSimMode) {
+    const sug = ["found","missing","cancelled","reset"].includes(status) ? "סטטוס" : "פעולה";
+    const peula = statusLabels[status]||status;
+    try {
+      const params = new URLSearchParams({
+        action:"addlog", sug, peula,
+        makat: item.makat, teur: item.teur,
+        locOld: entry.locOld||loc, locNew: entry.locNew||dest||"",
+        qtyOld: entry.qtyOld||"", qtyNew: entry.qtyNew||"",
+        user: currentUser
+      });
+      fetch(GS_URL + "?" + params.toString());
+    } catch(e) {}
+  }
 }
 
 function openLog() {
@@ -2513,8 +2593,21 @@ function renderLog(f) {
 // ── TRASH FUNCTIONS ──
 async function restoreItem(id) {
   const restoredItem = [...ITEMS,...addedItems].find(i=>i.id===id);
+  const s = sharedState[id] || {};
+  // Restore to last known location before deletion
+  if(s.lastLoc && restoredItem) {
+    const m = s.lastLoc.match(/^([^\d]+)\s+(\d+)\s+—\s+(.+?)(?:\s+קופסא\s+(.+))?$/);
+    if(m) {
+      restoredItem.type = m[1].trim();
+      restoredItem.unit = m[2].padStart(2,"0");
+      const subPart = m[3].trim();
+      restoredItem.sub = subPart.replace(/^קומה |^מגירה /,"").trim();
+      restoredItem.box = m[4] ? m[4].trim() : null;
+    }
+  }
   delete sharedState[id];
   await deleteState(id);
+  await recordAction(id,"restore");
   reRender();
   updateGlobal();
   renderUnit("תא","99");
@@ -2580,33 +2673,53 @@ function itemLocStr(item) {
 
 // ── ERROR LOG ──
 let errorLog = [];
-function logError(context, err) {
+async function logError(context, err) {
   const entry = {time: new Date().toLocaleTimeString("he-IL"), context, error: err?.toString()||String(err)};
   errorLog.unshift(entry);
   if(errorLog.length > 50) errorLog.pop();
   showToast("error", "שגיאה — " + context, [entry.error, entry.time], []);
   console.error("[PB Error]", context, err);
+  // Send to Sheet
+  try {
+    const params = new URLSearchParams({
+      action:"adderror", context, error:entry.error,
+      user:currentUser||"", version:"v22.08.26.02"
+    });
+    await fetch(GS_URL + "?" + params.toString());
+  } catch(e2) {}
 }
 
 // ── EXPORT ──
 function exportCSV() {
-  const sMap = {found:"נמצא",missing:"חסר",partial:"כמות שונה",transfer:"הועבר",deleted:"הועבר לסל",cancelled:"בוטל",pending:"לא נספר"};
+  const sMap = {found:"נמצא", missing:"חסר", cancelled:"לא נספר", pending:"לא נספר"};
   const exportDate = new Date().toLocaleString("he-IL");
-  const rows = [["תאריך הוצאת דוח","סטטוס","מקט","תיאור","חח עבור","סוג כלי","כמות רשומה","כמות שנמצאה","מיקום נוכחי","מעדכן"]];
+  // Headers match old PB-0 format: A,B,C,D,E,F + new columns
+  const rows = [["חומר (מקט)","תיאור","חח עבור","סוג כלי","כמות","מיקום לפי מערכת","סוג אחסון","מספר יחידה","מס' מדף/קומה","האם בקופסא","מס' קופסא","סטטוס ספירה","נבדק ע\"י","תאריך ספירה","תאריך הוספה מקורי"]];
   allItems().forEach(item => {
     const s = sharedState[item.id] || {};
     const st = s.status || "pending";
-    if(st === "deleted" || st === "permanent_delete") return; // skip trash
-    // Get effective location (after transfer)
+    if(["deleted","permanent_delete"].includes(st)) return; // skip trash
+    // Effective location after transfers
     const loc = itemEffectiveLocation(item);
-    const locStr = loc.type+" "+loc.unit+" - "+loc.sub+(loc.box?" קופסא "+loc.box:"");
-    // Quantity: use foundQty if partial, kama if found, 0 if missing, original if pending
-    const fq = st==="found" ? item.kama : st==="missing" ? 0 : st==="partial" ? (s.foundQty||"") : "";
-    // Wrap makat in single quote to preserve leading zeros
+    // Build old-format location string (e.g. "01-02-03")
+    const locStr = loc.unit + "-" + (loc.sub||"") + (loc.box?"-"+loc.box:"");
+    // Storage type
+    const storageType = loc.type === "תא" && loc.unit === "00" ?
+      (SUB_LABELS_00[loc.sub]||loc.sub) : loc.type;
+    const unitNum = loc.unit;
+    const shelfNum = loc.sub;
+    const hasBox = loc.box ? "כן" : "";
+    const boxNum = loc.box || "";
+    // Status
+    const statusStr = sMap[st] || "לא נספר";
+    // Leading zero preservation
     const makat = "'" + item.makat;
+    const checkedBy = s.user || "";
+    const checkedDate = s.ts ? new Date(s.ts).toLocaleDateString("he-IL") : "";
     rows.push([
-      exportDate, sMap[st]||st, makat, item.teur, item.hch, item.kli,
-      item.kama, fq, locStr, s.user||""
+      makat, item.teur, item.hch||"", item.kli||"",
+      item.kama||"", locStr, storageType, unitNum, shelfNum,
+      hasBox, boxNum, statusStr, checkedBy, checkedDate, item.date||""
     ]);
   });
   const bom = "\uFEFF";
@@ -2714,13 +2827,14 @@ function exportCSV() {
       <img id="aboutLogo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
       <div style="font-size:20px;font-weight:800;color:var(--accent)">Parabellum Recensio</div>
       <div style="font-size:13px;color:var(--muted)">מערכת ספירת מלאי שטח</div>
+      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v22.08.26.02</div>
       <div style="font-size:12px;color:#57534e">פותח ע"י amorealms</div>
       <div style="width:100%;height:1px;background:#2a2a2a;margin:4px 0"></div>
       <a href="https://amorealms.github.io/pb0/guide.html" target="_blank"
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v08.08.26.26</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v22.08.26.02</div>
     </div>
   </div>
 </div>
