@@ -1,5 +1,5 @@
 <!--
-  Parabellum Recensio v23.08.26.04
+  Parabellum Recensio v23.08.26.05
   תאריך: 22.08.26
 
   תיקונים:
@@ -310,6 +310,11 @@ body.theme-steel .login-card{background:#fff}
 .sum-table tr.s-found td{background:rgba(74,222,128,.05)}
 .sum-table tr.s-missing td{background:rgba(248,113,113,.05)}
 
+
+.transfer-item{padding:10px 12px;background:var(--white);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text);transition:background .1s}
+.transfer-item:active,.transfer-item.selected{background:var(--accent-light);border-color:var(--accent);color:var(--accent);font-weight:700}
+.transfer-priority{border-right:3px solid var(--accent)}
+
 </style>
 </head>
 <body>
@@ -335,7 +340,7 @@ body.theme-steel .login-card{background:#fff}
       <button onclick="enterSimulation()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">SIM</button>
       <button onclick="openTheme()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🎨</button>
     </div>
-    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.04</div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.05</div>
   </div>
 </div>
 
@@ -356,7 +361,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.04</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.05</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -514,9 +519,13 @@ body.theme-steel .login-card{background:#fff}
         <button class="inline-confirm" data-action="updateqty">אישור</button>
       </div>
       <button class="action-btn" style="color:var(--orange);border-color:var(--orange-border)" data-toggle="transferField"><span class="ic">→</span>העבר מיקום</button>
-      <div class="inline-field" id="transferField">
-        <select class="loc-select" id="transferDest"></select>
-        <button class="inline-confirm" style="background:var(--orange)" data-action="transfer">אישור</button>
+      <div class="inline-field" id="transferField" style="display:none;flex-direction:column;gap:8px;padding:8px 0">
+        <input type="text" id="transferSearch" class="inline-input" placeholder="🔍 חפש מיקום..." oninput="filterTransferList()" style="width:100%">
+        <div id="transferList" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+        <div style="display:flex;gap:8px">
+          <span id="transferSelected" style="flex:1;font-size:12px;color:var(--muted);padding:6px 0">לא נבחר מיקום</span>
+          <button class="inline-confirm" style="background:var(--orange)" data-action="transfer">אישור</button>
+        </div>
       </div>
       <div style="height:1px;background:var(--border);margin:6px 0"></div>
       <button class="action-btn" style="color:var(--muted);border-color:var(--border)" data-action="reset"><span class="ic">↺</span>אפס בחירה</button>
@@ -1907,6 +1916,8 @@ function goSub(type, unit, sub, skipHistory) {
   document.getElementById("backBtn").style.display = "flex";
   const unitLabel = type + " " + unit;
   const isVirtual00 = type==="תא" && unit==="00";
+  const isVirtual99 = type==="תא" && unit==="99";
+  const unitLabel2 = isVirtual00 ? "אחסון זמני" : isVirtual99 ? "X — פריטים שהוסרו" : type+" "+unit;
   const subLabel = isVirtual00 ? (SUB_LABELS_00[sub]||sub) : (type==="תא" ? "קומה " : "מגירה ") + sub;
   document.getElementById("topTitle").textContent = subLabel;
   setBreadcrumb([
@@ -2140,7 +2151,7 @@ function renderItemRow(item) {
   if(status==="found")    stag = '<span class="tag t-found">✓ נמצא</span>';
   if(status==="missing")  stag = '<span class="tag t-missing">✗ חסר</span>';
   if(status==="partial")  stag = `<span class="tag t-partial">~ ${s.foundQty}</span>`;
-  if(status==="transfer") stag = `<span class="tag t-transfer">→ ${s.dest||""}</span>`;
+  if(status==="transfer") { const destShort = (s.dest||"").split("—").pop()?.trim()||s.dest||""; stag = `<span class="tag t-transfer">→ ${destShort}</span>`; }
   const utag = s.user ? `<span class="tag t-user">${s.user}</span>` : "";
   return `<div class="item-row s-${status}" data-item-id="${item.id}" data-makat="${item.makat}" data-teur="${item.teur}" onclick="handleItemClick(this)">
     <div class="item-top">
@@ -2208,9 +2219,24 @@ function openAction(id) {
   document.getElementById("partialField").classList.remove("show");
   document.getElementById("transferField").classList.remove("show");
   document.getElementById("partialQty").value = s.foundQty || "";
-  const sel = document.getElementById("transferDest");
-  sel.innerHTML = ALL_LOCS.map(l =>
-    `<option value="${l}"${s.dest===l?" selected":""}>${l}</option>`).join("");
+  // Populate transfer list
+  selectedTransferDest = s.dest || "";
+  const priority = ALL_LOCS.filter(l => l.includes("אחסון זמני"));
+  const rest = ALL_LOCS.filter(l => !l.includes("אחסון זמני") && !l.includes("פריטים שהוסרו"));
+  const allSorted = [...priority, ...rest];
+  const tList = document.getElementById("transferList");
+  if(tList) {
+    tList.innerHTML = allSorted.map(l => {
+      const isPriority = l.includes("אחסון זמני");
+      const isSelected = l === selectedTransferDest;
+      return `<div class="transfer-item${isPriority?" transfer-priority":""}${isSelected?" selected":""}"
+        onclick="selectTransferDest('${l.replace(/'/g,"\\'")}', this)">
+        ${isPriority?"⭐ ":""}${l}
+      </div>`;
+    }).join("");
+    document.getElementById("transferSelected").textContent = selectedTransferDest ? "✓ "+selectedTransferDest : "לא נבחר מיקום";
+    if(document.getElementById("transferSearch")) document.getElementById("transferSearch").value = "";
+  }
   document.getElementById("actionOverlay").classList.add("open");
 }
 
@@ -2260,7 +2286,7 @@ async function doAction(type) {
       showToast("success","הכמות עודכנה בהצלחה",[...itemDetails(item),`<strong>כמות ישנה:</strong> ${oldQty}`,`<strong>כמות חדשה:</strong> ${val}`],[]);
     }
   } else if(type==="transfer") {
-    const dest = document.getElementById("transferDest").value;
+    const dest = selectedTransferDest || document.getElementById("transferDest")?.value || "";
     if(current==="transfer") { delete sharedState[activeItemId]; } // No deleteState - upsert will overwrite
     else {
       const oldLoc = itemLocStr(item);
@@ -2305,7 +2331,9 @@ async function doAction(type) {
     // Remove from addedItems if new
     // Mark as deleted (goes to trash, not permanent)
     const deletedItem = [...ITEMS,...addedItems].find(i=>i.id===activeItemId);
-    const lastLoc = deletedItem ? itemLocStr(deletedItem) : "";
+    // Save effective location (after transfers) as lastLoc
+    const effLoc = deletedItem ? itemEffectiveLocation(deletedItem) : null;
+    const lastLoc = effLoc ? (effLoc.type+" "+effLoc.unit+" — "+(effLoc.type==="תא"&&effLoc.unit==="00"?(SUB_LABELS_00[effLoc.sub]||effLoc.sub):((effLoc.type==="תא"?"קומה ":"מגירה ")+effLoc.sub))+(effLoc.box?" קופסא "+effLoc.box:"")) : "";
     sharedState[activeItemId] = {status:"deleted", user:currentUser, ts:Date.now(), lastLoc};
     // Save lastLoc to Sheet so restore works after reload
     await saveState(activeItemId, sharedState[activeItemId], activeItemId);
@@ -2604,7 +2632,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v23.08.26.04 | SIM";
+    document.getElementById("versionBadge").textContent = "v23.08.26.05 | SIM";
   goHome();
 }
 
@@ -2621,7 +2649,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v23.08.26.04";
+  if(vb) vb.textContent = "v23.08.26.05";
 }
 
 async function resetSim() {
@@ -2859,6 +2887,33 @@ function renderItemHistory(entries) {
     </div>`).join("");
 }
 
+// ── TRANSFER LIST ──
+let selectedTransferDest = "";
+
+function filterTransferList() {
+  const q = (document.getElementById("transferSearch")?.value||"").trim().toLowerCase();
+  const priority = ALL_LOCS.filter(l => l.includes("אחסון זמני"));
+  const rest = ALL_LOCS.filter(l => !l.includes("אחסון זמני") && !l.includes("פריטים שהוסרו"));
+  const allSorted = [...priority, ...rest];
+  const filtered = q ? allSorted.filter(l => l.toLowerCase().includes(q)) : allSorted;
+  const tList = document.getElementById("transferList");
+  if(tList) tList.innerHTML = filtered.map(l => {
+    const isPriority = l.includes("אחסון זמני");
+    return `<div class="transfer-item${isPriority?" transfer-priority":""}"
+      onclick="selectTransferDest('${l.replace(/'/g,"\\'")}', this)">
+      ${isPriority?"⭐ ":""}${l}
+    </div>`;
+  }).join("");
+}
+
+function selectTransferDest(loc, el) {
+  selectedTransferDest = loc;
+  const sel = document.getElementById("transferSelected");
+  if(sel) sel.textContent = "✓ " + loc;
+  document.querySelectorAll(".transfer-item").forEach(i => i.classList.remove("selected"));
+  if(el) el.classList.add("selected");
+}
+
 // ── TRASH FUNCTIONS ──
 async function restoreItem(id) {
   const restoredItem = [...ITEMS,...addedItems].find(i=>i.id===id);
@@ -2957,7 +3012,7 @@ async function logError(context, err) {
   try {
     const params = new URLSearchParams({
       action:"adderror", context, error:entry.error,
-      user:currentUser||"", version:"v23.08.26.04"
+      user:currentUser||"", version:"v23.08.26.05"
     });
     await fetch(GS_URL + "?" + params.toString());
   } catch(e2) {}
@@ -3315,14 +3370,14 @@ function exportCSV_old() {
       <img id="aboutLogo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
       <div style="font-size:20px;font-weight:800;color:var(--accent)">Parabellum Recensio</div>
       <div style="font-size:13px;color:var(--muted)">מערכת ספירת מלאי שטח</div>
-      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.04</div>
+      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.05</div>
       <div style="font-size:12px;color:#57534e">פותח ע"י amorealms</div>
       <div style="width:100%;height:1px;background:#2a2a2a;margin:4px 0"></div>
       <a href="https://amorealms.github.io/pb0/guide.html" target="_blank"
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.04</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.05</div>
     </div>
   </div>
 </div>
