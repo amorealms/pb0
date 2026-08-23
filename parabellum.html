@@ -1,5 +1,5 @@
 <!--
-  Parabellum Recensio v23.08.26.05
+  Parabellum Recensio v23.08.26.06
   תאריך: 22.08.26
 
   תיקונים:
@@ -340,7 +340,7 @@ body.theme-steel .login-card{background:#fff}
       <button onclick="enterSimulation()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">SIM</button>
       <button onclick="openTheme()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🎨</button>
     </div>
-    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.05</div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.06</div>
   </div>
 </div>
 
@@ -361,7 +361,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.05</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.06</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -1900,11 +1900,13 @@ function goHome(skipHistory) {
 function goUnit(type, unit, skipHistory) {
   nav = {unit:{type,unit}, sub:null, box:null};
   document.getElementById("backBtn").style.display = "flex";
-  const label = type + " " + unit;
+  const isV00 = type==="תא" && unit==="00";
+  const isV99 = type==="תא" && unit==="99";
+  const label = isV00 ? "אחסון זמני" : isV99 ? "X — פריטים שהוסרו" : type + " " + unit;
   document.getElementById("topTitle").textContent = label;
   setBreadcrumb([
     '<span class="bc-link" onclick="goLogin()">ראשי</span>','<span style="margin:0 4px;color:var(--muted)"> › </span>','<span class="bc-link" onclick="goHome()">מחסן חלפים</span>',
-    '<span>'+label+'</span>'
+    '<span style="margin:0 4px;color:var(--muted)"> › </span>','<span>'+label+'</span>'
   ]);
   renderUnit(type, unit);
   showScreen("screenUnit");
@@ -2242,7 +2244,7 @@ function openAction(id) {
 
 function toggleField(id) {
   const f = document.getElementById(id);
-  const isShowing = f.classList.contains("show");
+  const isShowing = f.style.display !== "none" && f.classList.contains("show");
   const s = sharedState[activeItemId];
   if(id==="partialField" && s?.status==="partial" && isShowing) {
     delete sharedState[activeItemId];
@@ -2260,9 +2262,15 @@ function toggleField(id) {
     reRender(); updateGlobal();
     return;
   }
-  f.classList.toggle("show");
+  // Toggle visibility
+  const showing = f.classList.toggle("show");
+  if(id === "transferField") {
+    f.style.display = showing ? "flex" : "none";
+  }
   const other = id==="partialField" ? "transferField" : "partialField";
-  document.getElementById(other).classList.remove("show");
+  const otherEl = document.getElementById(other);
+  otherEl.classList.remove("show");
+  if(other === "transferField") otherEl.style.display = "none";
 }
 
 async function doAction(type) {
@@ -2632,7 +2640,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v23.08.26.05 | SIM";
+    document.getElementById("versionBadge").textContent = "v23.08.26.06 | SIM";
   goHome();
 }
 
@@ -2649,7 +2657,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v23.08.26.05";
+  if(vb) vb.textContent = "v23.08.26.06";
 }
 
 async function resetSim() {
@@ -3012,7 +3020,7 @@ async function logError(context, err) {
   try {
     const params = new URLSearchParams({
       action:"adderror", context, error:entry.error,
-      user:currentUser||"", version:"v23.08.26.05"
+      user:currentUser||"", version:"v23.08.26.06"
     });
     await fetch(GS_URL + "?" + params.toString());
   } catch(e2) {}
@@ -3370,14 +3378,14 @@ function exportCSV_old() {
       <img id="aboutLogo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
       <div style="font-size:20px;font-weight:800;color:var(--accent)">Parabellum Recensio</div>
       <div style="font-size:13px;color:var(--muted)">מערכת ספירת מלאי שטח</div>
-      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.05</div>
+      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.06</div>
       <div style="font-size:12px;color:#57534e">פותח ע"י amorealms</div>
       <div style="width:100%;height:1px;background:#2a2a2a;margin:4px 0"></div>
       <a href="https://amorealms.github.io/pb0/guide.html" target="_blank"
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.05</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.06</div>
     </div>
   </div>
 </div>
