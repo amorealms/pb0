@@ -392,6 +392,10 @@ body.theme-steel .login-card{background:#fff}
         <div class="sum-label">לא נספרו</div>
       </div>
     </div>
+    <div style="padding:0 14px 10px;display:flex;gap:8px">
+      <button onclick="doExportCSV('all')" style="flex:1;padding:10px;background:var(--accent);color:#111;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">ייצא CSV מלא</button>
+      <button onclick="doExportCSV('filtered')" style="flex:1;padding:10px;background:var(--white);color:var(--accent);border:1.5px solid var(--accent);border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">ייצא סינון</button>
+    </div>
     <div style="overflow-x:auto;padding:0 14px">
       <table class="sum-table" id="sumTable">
         <thead>
@@ -405,10 +409,7 @@ body.theme-steel .login-card{background:#fff}
         <tbody id="sumTableBody"></tbody>
       </table>
     </div>
-    <div style="padding:14px;display:flex;gap:10px">
-      <button onclick="doExportCSV('all')" style="flex:1;padding:12px;background:var(--accent);color:#111;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">ייצא CSV מלא</button>
-      <button onclick="doExportCSV('filtered')" id="exportFilteredBtn" style="flex:1;padding:12px;background:var(--white);color:var(--accent);border:1.5px solid var(--accent);border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">ייצא סינון נוכחי</button>
-    </div>
+
   </div>
 
   <!-- LOG SCREEN -->
@@ -1849,9 +1850,11 @@ function updateGlobal() {
   document.getElementById("progFill").style.width = pct + "%";
   let f=0,m=0,p=0,t=0;
   all.forEach(i => {
-    const s = getStatus(i.id);
-    if(s==="found") f++; else if(s==="missing") m++;
-    else if(s==="partial") p++; else if(s==="transfer") t++;
+    const s = sharedState[i.id]?.status || "pending";
+    // New items default to "found"
+    const effectiveStatus = (s==="pending" && i.isNew) ? "found" : s;
+    if(effectiveStatus==="found") f++; else if(effectiveStatus==="missing") m++;
+    else if(effectiveStatus==="partial") p++; else if(effectiveStatus==="transfer") t++;
   });
   document.getElementById("cFound").textContent = f;
   document.getElementById("cMissing").textContent = m;
@@ -2846,26 +2849,28 @@ async function openItemHistory(itemId) {
     '<div style="text-align:center;padding:20px;color:var(--muted)">טוען...</div>';
   document.getElementById("historyOverlay").classList.add("open");
 
-  // Filter local actionLog first
+  // Show local entries immediately
+  const makat = (item.makat||"").replace(/'/g,"").replace(/'/g,"");
   const localEntries = actionLog.filter(e =>
-    e.makat && item.makat && e.makat.replace(/'/g,"") === item.makat.replace(/'/g,"")
+    (e.makat||"").replace(/'/g,"").replace(/'/g,"") === makat
   );
-  renderItemHistory(localEntries);
+  renderItemHistory(localEntries.length ? localEntries : []);
 
   // Load from Sheet for full history
   try {
     const r = await fetch(GS_URL + "?action=getlog");
     const d = await r.json();
     if(d.ok && d.log) {
-      const makat = item.makat.replace(/'/g,"");
-      const entries = d.log.filter(e => (e.makat||"").replace(/'/g,"") === makat);
+      const entries = d.log.filter(e => (e.makat||"").replace(/'/g,"").replace(/'/g,"") === makat);
+      // Filter out בוטל noise
+      const cleanEntries = entries.filter(e => e.peula && e.peula !== "בוטל" && e.peula !== "cancelled");
       const statusLabels = {
         "נמצא ✓":"נמצא ✓","חסר ✗":"חסר ✗","הועבר →":"הועבר →",
         "כמות ~":"כמות ~","נוסף +":"נוסף +","הועבר לסל 🗑":"הועבר לסל",
-        "נמחק לצמיתות ❌":"נמחק","בוטל ↺":"בוטל","אופס ↺":"אופס",
+        "נמחק לצמיתות ❌":"נמחק לצמיתות","בוטל ↺":"אופס","אופס ↺":"אופס",
         "שוחזר ♻️":"שוחזר"
       };
-      const mapped = entries.map(e => ({
+      const mapped = cleanEntries.map(e => ({
         time: e.time, label: statusLabels[e.peula]||e.peula||"",
         status: e.sug, loc: e.locOld||"", dest: e.locNew||"",
         qtyOld: e.qtyOld||"", qtyNew: e.qtyNew||"", user: e.user||""
@@ -2962,7 +2967,7 @@ async function restoreItem(id) {
     delete sharedState[id];
     await deleteState(id);
   }
-  await recordAction(id,"restore",restoreDest,{locNew:restoreDest});
+  await recordAction(id,"restore",restoreDest,{locOld:"X — פריטים שהוסרו", locNew:restoreDest});
   reRender();
   updateGlobal();
   renderUnit("תא","99");
