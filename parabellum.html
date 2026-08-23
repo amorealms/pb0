@@ -1,5 +1,5 @@
 <!--
-  Parabellum Recensio v23.08.26.11
+  Parabellum Recensio v23.08.26.12
   תאריך: 22.08.26
 
   תיקונים:
@@ -340,7 +340,7 @@ body.theme-steel .login-card{background:#fff}
       <button onclick="enterSimulation()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">SIM</button>
       <button onclick="openTheme()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🎨</button>
     </div>
-    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.11</div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.12</div>
   </div>
 </div>
 
@@ -361,7 +361,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.11</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.12</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -2397,8 +2397,8 @@ async function saveNewItem() {
   // Prevent duplicate local add
   if(addedItems.find(i => i.id === id)) return;
   addedItems.push(item);
-  sharedState[id] = {status:"found", foundQty:item.kama, user:currentUser, ts:Date.now()};
-  // Will be recorded as "added" in recordAction below
+  // New item starts as "pending" - user must manually mark as found
+  sharedState[id] = {};
   // Save item details to Sheet
   const simParam = isSimMode ? "&mode=sim" : "";
   const params = new URLSearchParams({
@@ -2406,7 +2406,7 @@ async function saveNewItem() {
     hch:item.hch, kli:item.kli, kama:item.kama, loc, user:currentUser
   });
   try { await fetch(GS_URL + "?" + params.toString() + simParam); } catch(e) {}
-  await saveState(id, sharedState[id], id);
+  // Don't save status to Sheet - item starts as pending
   await recordAction(id, "added", null, {locNew: loc});
   closeOverlay("addOverlay");
   ["fMakat","fTeur","fHch","fKli","fQty"].forEach(i => document.getElementById(i).value="");
@@ -2649,7 +2649,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v23.08.26.11 | SIM";
+    document.getElementById("versionBadge").textContent = "v23.08.26.12 | SIM";
   goHome();
 }
 
@@ -2666,7 +2666,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v23.08.26.11";
+  if(vb) vb.textContent = "v23.08.26.12";
 }
 
 async function resetSim() {
@@ -2850,11 +2850,11 @@ async function openItemHistory(itemId) {
   document.getElementById("historyOverlay").classList.add("open");
 
   // Show local entries immediately - match by makat OR item teur
-  const makat = (item.makat||"").replace(/['']/g,"").trim();
-  const teur = (item.teur||"").trim();
+  const makat = String(item.makat||"").replace(/['']/g,"").trim();
+  const teur = String(item.teur||"").trim();
   const localEntries = actionLog.filter(e => {
-    const eMakat = (e.makat||"").replace(/['']/g,"").trim();
-    const eTeur = (e.teur||"").trim();
+    const eMakat = String(e.makat||"").replace(/['']/g,"").trim();
+    const eTeur = String(e.teur||"").trim();
     return (makat && eMakat === makat) || (teur && eTeur === teur);
   });
   // Always render immediately (even if empty - shows "אין היסטוריה")
@@ -2867,7 +2867,7 @@ async function openItemHistory(itemId) {
     const r = await fetch(GS_URL + "?action=getlog");
     const d = await r.json();
     if(d.ok && d.log) {
-      const entries = d.log.filter(e => (e.makat||"").replace(/'/g,"").replace(/'/g,"") === makat);
+      const entries = d.log.filter(e => String(e.makat||"").replace(/['']/g,"").trim() === makat);
       // Filter out בוטל noise
       const cleanEntries = entries.filter(e => e.peula && e.peula !== "בוטל" && e.peula !== "cancelled");
       const statusLabels = {
@@ -3053,7 +3053,7 @@ async function logError(context, err) {
   try {
     const params = new URLSearchParams({
       action:"adderror", context, error:entry.error,
-      user:currentUser||"", version:"v23.08.26.11"
+      user:currentUser||"", version:"v23.08.26.12"
     });
     await fetch(GS_URL + "?" + params.toString());
   } catch(e2) {}
@@ -3416,14 +3416,14 @@ function exportCSV_old() {
       <img id="aboutLogo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
       <div style="font-size:20px;font-weight:800;color:var(--accent)">Parabellum Recensio</div>
       <div style="font-size:13px;color:var(--muted)">מערכת ספירת מלאי שטח</div>
-      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.11</div>
+      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.12</div>
       <div style="font-size:12px;color:#57534e">פותח ע"י amorealms</div>
       <div style="width:100%;height:1px;background:#2a2a2a;margin:4px 0"></div>
       <a href="https://amorealms.github.io/pb0/guide.html" target="_blank"
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.11</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.12</div>
     </div>
   </div>
 </div>
