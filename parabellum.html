@@ -2849,12 +2849,18 @@ async function openItemHistory(itemId) {
     '<div style="text-align:center;padding:20px;color:var(--muted)">טוען...</div>';
   document.getElementById("historyOverlay").classList.add("open");
 
-  // Show local entries immediately
-  const makat = (item.makat||"").replace(/'/g,"").replace(/'/g,"");
-  const localEntries = actionLog.filter(e =>
-    (e.makat||"").replace(/'/g,"").replace(/'/g,"") === makat
-  );
-  renderItemHistory(localEntries.length ? localEntries : []);
+  // Show local entries immediately - match by makat OR item teur
+  const makat = (item.makat||"").replace(/['']/g,"").trim();
+  const teur = (item.teur||"").trim();
+  const localEntries = actionLog.filter(e => {
+    const eMakat = (e.makat||"").replace(/['']/g,"").trim();
+    const eTeur = (e.teur||"").trim();
+    return (makat && eMakat === makat) || (teur && eTeur === teur);
+  });
+  // Always render immediately (even if empty - shows "אין היסטוריה")
+  document.getElementById("historyList").innerHTML = 
+    localEntries.length ? "" : '<div style="text-align:center;padding:20px;color:var(--muted)">טוען מהשרת...</div>';
+  if(localEntries.length) renderItemHistory(localEntries);
 
   // Load from Sheet for full history
   try {
