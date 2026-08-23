@@ -1,5 +1,5 @@
 <!--
-  Parabellum Recensio v23.08.26.10
+  Parabellum Recensio v23.08.26.11
   תאריך: 22.08.26
 
   תיקונים:
@@ -340,7 +340,7 @@ body.theme-steel .login-card{background:#fff}
       <button onclick="enterSimulation()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">SIM</button>
       <button onclick="openTheme()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🎨</button>
     </div>
-    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.10</div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v23.08.26.11</div>
   </div>
 </div>
 
@@ -361,7 +361,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.10</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v23.08.26.11</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -454,7 +454,7 @@ body.theme-steel .login-card{background:#fff}
       </div>
     </div>
     <div class="export-wrap">
-      <button class="export-btn" id="exportBtn" onclick="exportCSV()" disabled>ייצא דוח CSV מלא</button>
+      <button class="export-btn" id="exportBtn" onclick="openSummary()">סיכום ספירה 📊</button>
     </div>
   </div>
 
@@ -2311,8 +2311,12 @@ async function doAction(type) {
   }
   if(type === "reset") {
     if(!sharedState[activeItemId]) { closeOverlay("actionOverlay"); return; }
+    const prevStatus = sharedState[activeItemId]?.status;
     delete sharedState[activeItemId];
-    await deleteState(activeItemId);
+    // Only call deleteState if there was a real status (not transfer/deleted)
+    if(prevStatus && !["transfer","deleted","permanent_delete","cancelled"].includes(prevStatus)) {
+      await deleteState(activeItemId);
+    }
     await recordAction(activeItemId,"reset");
     closeOverlay("actionOverlay");
     reRender(); updateGlobal();
@@ -2391,6 +2395,7 @@ async function saveNewItem() {
   if(addedItems.find(i => i.id === id)) return;
   addedItems.push(item);
   sharedState[id] = {status:"found", foundQty:item.kama, user:currentUser, ts:Date.now()};
+  // Will be recorded as "added" in recordAction below
   // Save item details to Sheet
   const simParam = isSimMode ? "&mode=sim" : "";
   const params = new URLSearchParams({
@@ -2399,6 +2404,7 @@ async function saveNewItem() {
   });
   try { await fetch(GS_URL + "?" + params.toString() + simParam); } catch(e) {}
   await saveState(id, sharedState[id], id);
+  await recordAction(id, "added", null, {locNew: loc});
   closeOverlay("addOverlay");
   ["fMakat","fTeur","fHch","fKli","fQty"].forEach(i => document.getElementById(i).value="");
   reRender();
@@ -2640,7 +2646,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v23.08.26.10 | SIM";
+    document.getElementById("versionBadge").textContent = "v23.08.26.11 | SIM";
   goHome();
 }
 
@@ -2657,7 +2663,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v23.08.26.10";
+  if(vb) vb.textContent = "v23.08.26.11";
 }
 
 async function resetSim() {
@@ -2971,7 +2977,8 @@ async function permanentDelete(id) {
   const permItem = [...ITEMS,...addedItems].find(i=>i.id===id);
   sharedState[id] = {status:"permanent_delete", user:currentUser, ts:Date.now()};
   await saveState(id, sharedState[id], id);
-  await recordAction(id, "permanent_delete");
+  const permLoc = permItem ? itemLocStr(permItem) : "";
+  await recordAction(id, "permanent_delete", null, {locOld: permLoc});
   reRender();
   updateGlobal();
   renderUnit("תא","99");
@@ -3035,7 +3042,7 @@ async function logError(context, err) {
   try {
     const params = new URLSearchParams({
       action:"adderror", context, error:entry.error,
-      user:currentUser||"", version:"v23.08.26.10"
+      user:currentUser||"", version:"v23.08.26.11"
     });
     await fetch(GS_URL + "?" + params.toString());
   } catch(e2) {}
@@ -3122,20 +3129,26 @@ async function loadLogFromSheet() {
         "נמצא ✓":"found","נמצא":"found",
         "חסר ✗":"missing","חסר":"missing",
         "הועבר →":"transfer","הועבר":"transfer","העבר מיקום":"transfer",
-        "כמות שונה ~":"partial","עדכן כמות":"partial",
+        "כמות ~":"partial","עדכן כמות":"partial",
         "הוספה":"added","נוסף +":"added",
-        "נמחק 🗑":"deleted","בוטל":"cancelled","אופס ↺":"reset"
+        "הועבר לסל 🗑":"deleted","הועבר לסל":"deleted",
+        "נמחק לצמיתות ❌":"permanent_delete","נמחק לצמיתות":"permanent_delete",
+        "שוחזר ♻️":"restore","שוחזר":"restore",
+        "אופס ↺":"reset","בוטל ↺":"reset"
       };
       const labelMap = {
         found:"נמצא ✓",missing:"חסר ✗",transfer:"הועבר →",
-        partial:"כמות ~",added:"נוסף +",deleted:"נמחק 🗑",
-        cancelled:"בוטל",reset:"אופס ↺"
+        partial:"כמות ~",added:"נוסף +",deleted:"הועבר לסל 🗑",
+        permanent_delete:"נמחק לצמיתות ❌",cancelled:"בוטל ↺",
+        reset:"אופס ↺",restore:"שוחזר ♻️"
       };
-      actionLog = d.log.map(e => {
-        const st = statusMap[e.peula]||"cancelled";
+      // Filter out pure "בוטל" entries (noise from deleteState)
+      const filtered = d.log.filter(e => e.peula !== "בוטל" && e.peula !== "cancelled" && e.peula);
+      actionLog = filtered.map(e => {
+        const st = statusMap[e.peula] || "cancelled";
         return {
           time: e.time, status: st,
-          label: labelMap[st]||e.peula||"",
+          label: labelMap[st] || e.peula || "",
           makat: e.makat||"", teur: e.teur||"",
           loc: e.locOld||"", dest: e.locNew||"",
           qtyOld: e.qtyOld||"", qtyNew: e.qtyNew||"",
@@ -3143,7 +3156,6 @@ async function loadLogFromSheet() {
         };
       });
       renderLogScreen(currentLogScreenFilter);
-      // Also update pills
       updateGlobal();
     }
   } catch(e) { logError("טעינת לוג", e); }
@@ -3393,14 +3405,14 @@ function exportCSV_old() {
       <img id="aboutLogo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
       <div style="font-size:20px;font-weight:800;color:var(--accent)">Parabellum Recensio</div>
       <div style="font-size:13px;color:var(--muted)">מערכת ספירת מלאי שטח</div>
-      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.10</div>
+      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v23.08.26.11</div>
       <div style="font-size:12px;color:#57534e">פותח ע"י amorealms</div>
       <div style="width:100%;height:1px;background:#2a2a2a;margin:4px 0"></div>
       <a href="https://amorealms.github.io/pb0/guide.html" target="_blank"
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.10</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v23.08.26.11</div>
     </div>
   </div>
 </div>
