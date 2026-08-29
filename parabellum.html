@@ -1,5 +1,13 @@
 <!--
-  Parabellum Recensio v27.08.26.01
+  Parabellum Recensio v29.08.26.01
+  תאריך: 29.08.26
+
+  תיקונים:
+  - חיפוש גלובלי — מציג מיקום 📍 אחרי חח עבור במקום סוג כלי
+  - אפס בחירה — עובד על סטטוס "חסר"
+
+<!--
+  Parabellum Recensio v29.08.26.01
   תאריך: 27.08.26
 
   תיקונים:
@@ -7,7 +15,15 @@
   - אפס בחירה — עובד גם על סטטוס "חסר"
 
 <!--
-  Parabellum Recensio v27.08.26.01
+  Parabellum Recensio v29.08.26.01
+  תאריך: 29.08.26
+
+  תיקונים:
+  - חיפוש גלובלי — מציג מיקום 📍 אחרי חח עבור במקום סוג כלי
+  - אפס בחירה — עובד על סטטוס "חסר"
+
+<!--
+  Parabellum Recensio v29.08.26.01
   תאריך: 23.08.26
 
   תיקונים:
@@ -18,7 +34,15 @@
   - שחזור — מיקום "מ:" תא X
 
 <!--
-  Parabellum Recensio v27.08.26.01
+  Parabellum Recensio v29.08.26.01
+  תאריך: 29.08.26
+
+  תיקונים:
+  - חיפוש גלובלי — מציג מיקום 📍 אחרי חח עבור במקום סוג כלי
+  - אפס בחירה — עובד על סטטוס "חסר"
+
+<!--
+  Parabellum Recensio v29.08.26.01
   תאריך: 27.08.26
 
   תיקונים:
@@ -26,7 +50,15 @@
   - אפס בחירה — עובד גם על סטטוס "חסר"
 
 <!--
-  Parabellum Recensio v27.08.26.01
+  Parabellum Recensio v29.08.26.01
+  תאריך: 29.08.26
+
+  תיקונים:
+  - חיפוש גלובלי — מציג מיקום 📍 אחרי חח עבור במקום סוג כלי
+  - אפס בחירה — עובד על סטטוס "חסר"
+
+<!--
+  Parabellum Recensio v29.08.26.01
   תאריך: 22.08.26
 
   תיקונים:
@@ -367,7 +399,7 @@ body.theme-steel .login-card{background:#fff}
       <button onclick="enterSimulation()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">SIM</button>
       <button onclick="openTheme()" style="flex:1;background:rgba(255,255,255,.03);border:1px solid #2a2a2a;color:#4a4a4a;padding:10px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🎨</button>
     </div>
-    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v27.08.26.01</div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:var(--accent);font-family:monospace">v29.08.26.01</div>
   </div>
 </div>
 
@@ -388,7 +420,7 @@ body.theme-steel .login-card{background:#fff}
   <div class="sync-bar">
     <div class="sync-dot" id="syncDot"></div>
     <span id="syncText">מחובר</span>
-    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v27.08.26.01</span>
+    <span style="margin-right:auto;font-size:11px;color:#94a3b8;font-family:monospace" id="versionBadge">v29.08.26.01</span>
   </div>
   <div class="breadcrumb" id="breadcrumb"></div>
   <div class="progress-wrap">
@@ -2072,7 +2104,6 @@ function renderUnit(type, unit) {
           <div class="item-makat" style="font-size:14px;font-weight:800;color:var(--text);font-family:monospace">${item.makat}</div>
         </div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${item.teur}</div>
-        ${showLoc ? `<div style="font-size:11px;color:var(--accent);margin-bottom:4px;font-weight:600">📍 ${itemLocStr(item)}</div>` : ""}
         <div class="item-tags">
           ${item.hch?`<span class="tag t-v">${item.hch}</span>`:""}
           <span class="tag" style="color:var(--muted)">הוסר ע"י ${s.user||"—"}</span>
@@ -2199,7 +2230,7 @@ function renderItemRow(item, showLoc) {
     <div style="font-size:13px;color:var(--muted);margin-bottom:4px;line-height:1.3">${item.teur}</div>
     <div class="item-tags">
       ${item.hch?`<span class="tag t-v">${item.hch}</span>`:""}
-      ${item.kli?`<span class="tag">${item.kli}</span>`:""}
+      ${showLoc?`<span class="tag" style="color:var(--accent);border-color:var(--accent);font-weight:700">📍 ${itemLocStr(item)}</span>`:(item.kli?`<span class="tag">${item.kli}</span>`:"")}
       <span class="tag t-q">רשום: ${item.kama}</span>
       ${item.date?`<span class="tag">${item.date}</span>`:""}
       ${stag}${utag}
@@ -2686,7 +2717,7 @@ function enterSimulation() {
   document.getElementById("syncDot").style.background = "#555";
   document.getElementById("syncText").textContent = "מצב סימולציה";
   if(document.getElementById("versionBadge"))
-    document.getElementById("versionBadge").textContent = "v27.08.26.01 | SIM";
+    document.getElementById("versionBadge").textContent = "v29.08.26.01 | SIM";
   goHome();
 }
 
@@ -2703,7 +2734,7 @@ function exitSim() {
   document.querySelectorAll(".name-btn").forEach(b => b.classList.remove("sel"));
   // Reset version badge
   const vb = document.getElementById("versionBadge");
-  if(vb) vb.textContent = "v27.08.26.01";
+  if(vb) vb.textContent = "v29.08.26.01";
 }
 
 async function resetSim() {
@@ -3112,7 +3143,7 @@ async function logError(context, err) {
   try {
     const params = new URLSearchParams({
       action:"adderror", context, error:entry.error,
-      user:currentUser||"", version:"v27.08.26.01"
+      user:currentUser||"", version:"v29.08.26.01"
     });
     await fetch(GS_URL + "?" + params.toString());
   } catch(e2) {}
@@ -3475,14 +3506,14 @@ function exportCSV_old() {
       <img id="aboutLogo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)">
       <div style="font-size:20px;font-weight:800;color:var(--accent)">Parabellum Recensio</div>
       <div style="font-size:13px;color:var(--muted)">מערכת ספירת מלאי שטח</div>
-      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v27.08.26.01</div>
+      <div style="font-size:12px;color:var(--accent);font-family:monospace;margin-top:4px;font-weight:700">v29.08.26.01</div>
       <div style="font-size:12px;color:#57534e">פותח ע"י amorealms</div>
       <div style="width:100%;height:1px;background:#2a2a2a;margin:4px 0"></div>
       <a href="https://amorealms.github.io/pb0/guide.html" target="_blank"
          style="width:100%;padding:12px;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.3);border-radius:10px;color:var(--accent);font-size:14px;font-weight:700;text-align:center;text-decoration:none;display:block">
         📖 לחץ כאן למדריך הפעלה
       </a>
-      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v27.08.26.01</div>
+      <div style="font-size:12px;color:#57534e;font-family:monospace">גרסה: v29.08.26.01</div>
     </div>
   </div>
 </div>
